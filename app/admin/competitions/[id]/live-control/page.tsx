@@ -24,7 +24,9 @@ export default async function LiveControlPage({
 
   const eventParticipants = store.getParticipants(id);
   const eventSpins = store.listSpins(id);
-  const latestSpin = eventSpins.at(-1);
+  const latestSpin = eventSpins[0];
+  const fairnessRecords = store.listSpinFairnessRecords(id);
+  const latestFairness = fairnessRecords[0];
 
   return (
     <AdminShell
@@ -56,6 +58,26 @@ export default async function LiveControlPage({
             </div>
           </section>
           <section className="card card-pad stack">
+            <h2 className="section-title">Fairness proof</h2>
+            {!latestFairness && <div className="muted">No fairness record yet. Spin once to generate commit/reveal proof.</div>}
+            {latestFairness && (
+              <>
+                <div className="list-item">
+                  <strong>Verified: {latestFairness.verified ? "yes" : "no"}</strong>
+                  <div className="muted">Algorithm: {latestFairness.algorithm}</div>
+                </div>
+                <div className="list-item" style={{ fontFamily: "monospace", fontSize: 12 }}>
+                  <div>commit: {latestFairness.commitHash.slice(0, 18)}...{latestFairness.commitHash.slice(-10)}</div>
+                  <div>reveal: {latestFairness.revealHash.slice(0, 18)}...{latestFairness.revealHash.slice(-10)}</div>
+                  <div>seed: {latestFairness.serverSeed.slice(0, 16)}...{latestFairness.serverSeed.slice(-8)}</div>
+                  <div>client: {latestFairness.clientSeed}</div>
+                  <div>nonce: {latestFairness.nonce}</div>
+                  <div>pool/index: {latestFairness.poolSize} / {latestFairness.resolvedIndex}</div>
+                </div>
+              </>
+            )}
+          </section>
+          <section className="card card-pad stack">
             <h2 className="section-title">Spin history</h2>
             {eventSpins.map((spin) => (
               <div key={spin.id} className="list-item">
@@ -64,6 +86,17 @@ export default async function LiveControlPage({
               </div>
             ))}
           </section>
+          {!!fairnessRecords.length && (
+            <section className="card card-pad stack">
+              <h2 className="section-title">Recent fairness records</h2>
+              {fairnessRecords.slice(0, 5).map((record) => (
+                <div key={record.id} className="list-item">
+                  <strong>{record.spinId}</strong>
+                  <div className="muted">{formatDateTime(record.createdAt)} • idx {record.resolvedIndex}/{record.poolSize} • {record.verified ? "verified" : "invalid"}</div>
+                </div>
+              ))}
+            </section>
+          )}
         </aside>
       </section>
     </AdminShell>
