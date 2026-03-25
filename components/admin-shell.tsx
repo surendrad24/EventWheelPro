@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { requireAdminPageAuth } from "@/lib/server/admin-auth";
 import type { AdminRole } from "@/lib/server/auth-db";
 import { store } from "@/lib/server/in-memory-store";
+import { MatrixRainBackground } from "@/components/matrix-rain-background";
 
 const firstCompetitionId = store.listCompetitions()[0]?.id ?? "comp-1";
 
@@ -31,6 +32,7 @@ export async function AdminShell({
 
   return (
     <div className="admin-matrix page shell sidebar-layout">
+      <MatrixRainBackground className="admin-rain" />
       <aside className="card admin-nav">
         <div className="stack">
           <div>

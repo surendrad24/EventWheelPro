@@ -387,6 +387,11 @@ textarea {
   z-index: 0;
 }
 
+.admin-rain {
+  opacity: 0.2;
+  background: radial-gradient(circle at 50% 10%, rgba(0, 20, 6, 0.4), #000);
+}
+
 .admin-matrix > * {
   position: relative;
   z-index: 1;
@@ -595,6 +600,24 @@ textarea {
   .admin-nav {
     position: static;
   }
+
+  .admin-matrix .admin-nav .stack[style] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+  }
+
+  .admin-matrix .admin-nav a {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+  }
+
+  .admin-matrix .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 640px) {
@@ -608,6 +631,25 @@ textarea {
 
   .title-xl {
     font-size: 2.4rem;
+  }
+
+  .admin-matrix .card-pad {
+    padding: 14px;
+  }
+
+  .admin-matrix .admin-nav .stack[style] {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-matrix .btn,
+  .admin-matrix .btn-secondary,
+  .admin-matrix .btn-ghost {
+    width: 100%;
+  }
+
+  .admin-matrix .wrap {
+    width: 100%;
+    gap: 8px;
   }
 }
 
@@ -988,7 +1030,8 @@ textarea {
   z-index: 1;
 }
 
-#matrix-rain-container {
+#matrix-rain-container,
+.matrix-rain-container {
   position: fixed;
   top: 0;
   left: 0;
@@ -1001,7 +1044,8 @@ textarea {
   pointer-events: none;
 }
 
-canvas#matrix-rain {
+canvas#matrix-rain,
+.matrix-rain-canvas {
   display: block;
   width: 100%;
   height: 100%;

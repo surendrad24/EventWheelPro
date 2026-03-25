@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 const MATRIX_CHARS = "01BTCETHSOLADAAVAXDOGELINKBNBSANTOSPIMATRIXTEAM".split("");
 
-export function MatrixRainBackground() {
+export function MatrixRainBackground({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -73,8 +73,12 @@ export function MatrixRainBackground() {
   }, []);
 
   return (
-    <div id="matrix-rain-container" aria-hidden="true">
-      <canvas id="matrix-rain" ref={canvasRef} />
+    <div
+      id="matrix-rain-container"
+      className={`matrix-rain-container ${className}`.trim()}
+      aria-hidden="true"
+    >
+      <canvas id="matrix-rain" className="matrix-rain-canvas" ref={canvasRef} />
     </div>
   );
 }
