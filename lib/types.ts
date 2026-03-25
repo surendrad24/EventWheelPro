@@ -59,6 +59,10 @@ export interface Participant {
   duplicateRiskScore: number;
   joinedAt: string;
   approvedAt?: string;
+  rejectedAt?: string;
+  rejectedReason?: string;
+  ipHash?: string;
+  deviceFingerprintHash?: string;
   recent?: boolean;
   wins: number;
 }
@@ -74,6 +78,9 @@ export interface Winner {
   claimStatus: ClaimStatus;
   payoutStatus: PayoutStatus;
   claimDeadlineAt: string;
+  claimedAt?: string;
+  verifiedAt?: string;
+  paidAt?: string;
   transactionReference?: string;
 }
 

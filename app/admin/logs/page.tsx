@@ -1,9 +1,9 @@
 import { AdminShell } from "@/components/admin-shell";
-import { getCompetitionLogs } from "@/lib/mock-data";
 import { formatDateTime } from "@/lib/format";
+import { store } from "@/lib/server/in-memory-store";
 
 export default function LogsPage() {
-  const logs = getCompetitionLogs();
+  const logs = store.getLogs();
 
   return (
     <AdminShell

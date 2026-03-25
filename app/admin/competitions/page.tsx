@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { StatusChip } from "@/components/status-chip";
-import { competitions } from "@/lib/mock-data";
 import { formatDateTime } from "@/lib/format";
+import { store } from "@/lib/server/in-memory-store";
 
 export default function CompetitionsPage() {
+  const competitions = store.listCompetitions();
+
   return (
     <AdminShell
       title="Competitions"

@@ -1,23 +1,28 @@
 import { NextResponse } from "next/server";
-import { getCompetitionBySlug } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const competition = getCompetitionBySlug(slug);
+  const body = await request.json().catch(() => ({}));
+  const result = store.registerBySlug(slug, body);
 
-  if (!competition) {
-    return NextResponse.json({ error: "Competition not found" }, { status: 404 });
+  if ("error" in result) {
+    const status =
+      result.error === "competition_not_found"
+        ? 404
+        : 400;
+    return NextResponse.json({ error: result.error }, { status });
   }
 
-  const body = await request.json().catch(() => ({}));
+  const competition = store.getCompetitionBySlug(slug);
 
   return NextResponse.json({
-    message: "Demo registration accepted",
-    competition: competition.slug,
-    submission: body,
-    registrationStatus: competition.verificationMode === "manual review" ? "pending_review" : "approved"
-  });
+    message: "registration_accepted",
+    competition: competition?.slug ?? slug,
+    participant: result.participant,
+    registrationStatus: result.participant.registrationStatus
+  }, { status: 201 });
 }

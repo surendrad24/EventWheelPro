@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { StatusChip } from "@/components/status-chip";
 import { WheelPreview } from "@/components/wheel-preview";
 import { formatDateTime } from "@/lib/format";
-import { getCompetitionById, getCompetitionParticipants, getCompetitionSpins } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export default async function LiveControlPage({
   params
@@ -11,7 +11,7 @@ export default async function LiveControlPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const maybeCompetition = getCompetitionById(id);
+  const maybeCompetition = store.getCompetitionById(id);
 
   if (!maybeCompetition) {
     notFound();
@@ -19,8 +19,8 @@ export default async function LiveControlPage({
 
   const competition = maybeCompetition;
 
-  const eventParticipants = getCompetitionParticipants(id);
-  const eventSpins = getCompetitionSpins(id);
+  const eventParticipants = store.getParticipants(id);
+  const eventSpins = store.listSpins(id);
   const latestSpin = eventSpins.at(-1);
 
   return (

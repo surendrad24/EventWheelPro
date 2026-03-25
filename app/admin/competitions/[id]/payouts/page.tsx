@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
 import { StatusChip } from "@/components/status-chip";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { getCompetitionById, getCompetitionWinners } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export default async function PayoutsPage({
   params
@@ -10,7 +10,7 @@ export default async function PayoutsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const maybeCompetition = getCompetitionById(id);
+  const maybeCompetition = store.getCompetitionById(id);
 
   if (!maybeCompetition) {
     notFound();
@@ -18,7 +18,7 @@ export default async function PayoutsPage({
 
   const competition = maybeCompetition;
 
-  const eventWinners = getCompetitionWinners(id);
+  const eventWinners = store.listWinners(id);
 
   return (
     <AdminShell

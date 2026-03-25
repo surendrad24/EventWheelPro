@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { ReactNode } from "react";
+import { store } from "@/lib/server/in-memory-store";
+
+const firstCompetitionId = store.listCompetitions()[0]?.id ?? "comp-1";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/competitions", label: "Competitions" },
-  { href: "/admin/competitions/comp-1/participants", label: "Participants" },
-  { href: "/admin/competitions/comp-1/live-control", label: "Live Control" },
-  { href: "/admin/competitions/comp-1/winners", label: "Winners" },
-  { href: "/admin/competitions/comp-1/payouts", label: "Payouts" },
+  { href: `/admin/competitions/${firstCompetitionId}/participants`, label: "Participants" },
+  { href: `/admin/competitions/${firstCompetitionId}/live-control`, label: "Live Control" },
+  { href: `/admin/competitions/${firstCompetitionId}/winners`, label: "Winners" },
+  { href: `/admin/competitions/${firstCompetitionId}/payouts`, label: "Payouts" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/templates", label: "Templates" }

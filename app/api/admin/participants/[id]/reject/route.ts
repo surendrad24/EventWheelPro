@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { store } from "@/lib/server/in-memory-store";
 
 export async function PATCH(
   request: Request,
@@ -6,11 +7,14 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
+  const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : "No reason supplied";
+  const participant = store.rejectParticipant(id, reason);
+  if (!participant) {
+    return NextResponse.json({ error: "participant_not_found" }, { status: 404 });
+  }
 
   return NextResponse.json({
-    message: "Demo participant rejected",
-    participantId: id,
-    reason: body.reason ?? "No reason supplied",
-    registrationStatus: "rejected"
+    message: "participant_rejected",
+    participant
   });
 }

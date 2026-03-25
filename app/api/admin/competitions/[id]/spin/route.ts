@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
-import { getCompetitionParticipants } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const pool = getCompetitionParticipants(id).filter((participant) => participant.registrationStatus === "approved");
-  const winner = pool[0];
+  const body = await request.json().catch(() => ({}));
+  const result = store.createSpin(id, typeof body.initiatedBy === "string" ? body.initiatedBy : "admin");
+
+  if ("error" in result) {
+    const status = result.error === "competition_not_found" ? 404 : 400;
+    return NextResponse.json({ error: result.error }, { status });
+  }
 
   return NextResponse.json({
-    message: "Demo spin complete",
+    message: "spin_completed",
     competitionId: id,
-    rngMode: "server-seeded RNG",
-    winner
+    rngMode: result.spin.rngMode,
+    spin: result.spin,
+    winner: result.winner,
+    participant: result.participant
   });
 }

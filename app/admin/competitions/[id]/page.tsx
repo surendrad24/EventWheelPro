@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
 import { StatCard } from "@/components/stat-card";
-import { getCompetitionById } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export default async function CompetitionDetailPage({
   params
@@ -10,7 +10,7 @@ export default async function CompetitionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const maybeCompetition = getCompetitionById(id);
+  const maybeCompetition = store.getCompetitionById(id);
 
   if (!maybeCompetition) {
     notFound();
