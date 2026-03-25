@@ -12,6 +12,7 @@ export const competitions: Competition[] = [
     slug: "solstice-surge",
     title: "Solstice Surge Championship",
     status: "live",
+    gameType: "wheel_of_fortune",
     themeKey: "aurora",
     description:
       "A branded live competition built for high-energy streams, verified entrants, and transparent winner selection.",
@@ -109,6 +110,7 @@ export const competitions: Competition[] = [
     slug: "night-fury-finals",
     title: "Night Fury Finals",
     status: "scheduled",
+    gameType: "quiz",
     themeKey: "ember",
     description: "A scheduled finals event prepared from a reusable template.",
     announcementText: "Scheduled for tomorrow. Approvals close one hour before kickoff.",

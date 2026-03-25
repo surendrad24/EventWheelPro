@@ -9,7 +9,7 @@ import {
   winners as seedWinners
 } from "@/lib/mock-data";
 import { computeRevealHash, deriveSpinIndex, randomHex, sha256Hex } from "@/lib/server/fairness";
-import type { Competition, EventLog, Participant, Spin, SpinFairnessRecord, Winner } from "@/lib/types";
+import type { Competition, CompetitionGameType, EventLog, Participant, Spin, SpinFairnessRecord, Winner } from "@/lib/types";
 
 type RegistrationPayload = {
   displayName: string;
@@ -60,11 +60,18 @@ const COMPETITION_STATUSES: Competition["status"][] = [
   "archived"
 ];
 
+const COMPETITION_GAME_TYPES: CompetitionGameType[] = [
+  "wheel_of_fortune",
+  "flip_to_win",
+  "quiz"
+];
+
 type CompetitionRow = {
   id: string;
   slug: string;
   title: string;
   status: Competition["status"];
+  game_type: CompetitionGameType;
   theme_key: string;
   description: string;
   announcement_text: string;
@@ -203,12 +210,23 @@ function parseJson<T>(raw: string | null | undefined, fallback: T): T {
   }
 }
 
+function normalizeCompetitionGameType(gameType: string | null | undefined, themeKey?: string) {
+  if (gameType && COMPETITION_GAME_TYPES.includes(gameType as CompetitionGameType)) {
+    return gameType as CompetitionGameType;
+  }
+  if ((themeKey ?? "").toLowerCase().includes("quiz")) {
+    return "quiz";
+  }
+  return "wheel_of_fortune";
+}
+
 function toCompetition(row: CompetitionRow): Competition {
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
     status: row.status,
+    gameType: normalizeCompetitionGameType(row.game_type, row.theme_key),
     themeKey: row.theme_key,
     description: row.description,
     announcementText: row.announcement_text,
@@ -346,6 +364,7 @@ class SQLiteStore {
     this.db = new Database(DB_PATH);
     this.db.pragma("journal_mode = WAL");
     this.initSchema();
+    this.ensureCompetitionColumns();
     this.ensureParticipantColumns();
     this.seedIfNeeded();
   }
@@ -357,6 +376,7 @@ class SQLiteStore {
         slug TEXT NOT NULL UNIQUE,
         title TEXT NOT NULL,
         status TEXT NOT NULL,
+        game_type TEXT NOT NULL DEFAULT 'wheel_of_fortune',
         theme_key TEXT NOT NULL,
         description TEXT NOT NULL,
         announcement_text TEXT NOT NULL,
@@ -500,6 +520,22 @@ class SQLiteStore {
     `);
   }
 
+  private ensureCompetitionColumns() {
+    const columns = this.db.prepare("PRAGMA table_info(competitions)").all() as Array<{ name: string }>;
+    const names = new Set(columns.map((column) => column.name));
+
+    if (!names.has("game_type")) {
+      this.db.exec("ALTER TABLE competitions ADD COLUMN game_type TEXT NOT NULL DEFAULT 'wheel_of_fortune'");
+      this.db.prepare(`
+        UPDATE competitions
+        SET game_type = CASE
+          WHEN LOWER(theme_key) LIKE '%quiz%' THEN 'quiz'
+          ELSE 'wheel_of_fortune'
+        END
+      `).run();
+    }
+  }
+
   private ensureParticipantColumns() {
     const columns = this.db.prepare("PRAGMA table_info(participants)").all() as Array<{ name: string }>;
     const names = new Set(columns.map((column) => column.name));
@@ -520,13 +556,13 @@ class SQLiteStore {
 
     const insertCompetition = this.db.prepare(`
       INSERT INTO competitions (
-        id, slug, title, status, theme_key, description, announcement_text, chain_key,
+        id, slug, title, status, game_type, theme_key, description, announcement_text, chain_key,
         token_contract_address, min_token_balance, verification_mode,
         registration_open_at, registration_close_at, event_start_at, event_end_at,
         total_winner_slots, auto_remove_winners, leaderboard_public, allow_public_winners,
         recent_winner_ids_json, stats_json, registration_fields_json, prize_tiers_json,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertParticipant = this.db.prepare(`
@@ -567,6 +603,7 @@ class SQLiteStore {
           competition.slug,
           competition.title,
           competition.status,
+          normalizeCompetitionGameType(competition.gameType, competition.themeKey),
           competition.themeKey,
           competition.description,
           competition.announcementText,
@@ -774,6 +811,7 @@ class SQLiteStore {
       slug,
       title,
       status,
+      gameType: normalizeCompetitionGameType(payload.gameType, payload.themeKey),
       themeKey: payload.themeKey ?? "default",
       description: payload.description ?? "",
       announcementText: payload.announcementText ?? "",
@@ -803,18 +841,19 @@ class SQLiteStore {
     const ts = nowIso();
     this.db.prepare(`
       INSERT INTO competitions (
-        id, slug, title, status, theme_key, description, announcement_text, chain_key,
+        id, slug, title, status, game_type, theme_key, description, announcement_text, chain_key,
         token_contract_address, min_token_balance, verification_mode,
         registration_open_at, registration_close_at, event_start_at, event_end_at,
         total_winner_slots, auto_remove_winners, leaderboard_public, allow_public_winners,
         recent_winner_ids_json, stats_json, registration_fields_json, prize_tiers_json,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       created.id,
       created.slug,
       created.title,
       created.status,
+      created.gameType,
       created.themeKey,
       created.description,
       created.announcementText,
@@ -920,6 +959,7 @@ class SQLiteStore {
       title: maybeTitle,
       slug: nextSlug,
       status,
+      gameType: normalizeCompetitionGameType(payload.gameType ?? competition.gameType, payload.themeKey ?? competition.themeKey),
       stats: competition.stats
     };
 
@@ -928,6 +968,7 @@ class SQLiteStore {
         slug = ?,
         title = ?,
         status = ?,
+        game_type = ?,
         theme_key = ?,
         description = ?,
         announcement_text = ?,
@@ -953,6 +994,7 @@ class SQLiteStore {
       merged.slug,
       merged.title,
       merged.status,
+      merged.gameType,
       merged.themeKey,
       merged.description,
       merged.announcementText,

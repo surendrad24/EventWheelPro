@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Competition, CompetitionStatus, PrizeTier, RegistrationField } from "@/lib/types";
+import type { Competition, CompetitionGameType, CompetitionStatus, PrizeTier, RegistrationField } from "@/lib/types";
 
 type EditorMode = "create" | "edit";
 
@@ -10,6 +10,7 @@ type CompetitionEditorState = {
   title: string;
   slug: string;
   status: CompetitionStatus;
+  gameType: CompetitionGameType;
   description: string;
   announcementText: string;
   themeKey: string;
@@ -30,6 +31,7 @@ type CompetitionEditorState = {
 };
 
 const STATUS_OPTIONS: CompetitionStatus[] = ["draft", "scheduled", "live", "paused", "completed", "archived"];
+const GAME_TYPE_OPTIONS: CompetitionGameType[] = ["wheel_of_fortune", "flip_to_win", "quiz"];
 const FIELD_TYPES: RegistrationField["type"][] = ["text", "email", "wallet", "country", "textarea"];
 
 function toInputDateTime(iso?: string) {
@@ -62,6 +64,7 @@ function toEditorState(competition?: Competition): CompetitionEditorState {
       title: "",
       slug: "",
       status: "draft",
+      gameType: "wheel_of_fortune",
       description: "",
       announcementText: "",
       themeKey: "matrix-neon",
@@ -109,6 +112,7 @@ function toEditorState(competition?: Competition): CompetitionEditorState {
     title: competition.title,
     slug: competition.slug,
     status: competition.status,
+    gameType: competition.gameType,
     description: competition.description,
     announcementText: competition.announcementText,
     themeKey: competition.themeKey,
@@ -302,6 +306,18 @@ export function CompetitionEditorForm({
             >
               {STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Game Type</span>
+            <select
+              className="matrix-neon-select"
+              value={form.gameType}
+              onChange={(event) => setForm((prev) => ({ ...prev, gameType: event.target.value as CompetitionGameType }))}
+            >
+              {GAME_TYPE_OPTIONS.map((gameType) => (
+                <option key={gameType} value={gameType}>{gameType.replaceAll("_", " ")}</option>
               ))}
             </select>
           </label>

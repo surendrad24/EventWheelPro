@@ -28,7 +28,7 @@ function winnerToParticipant(winner: Winner): WheelParticipant {
   return {
     id: winner.id,
     username: winner.displayName,
-    binanceId: winner.participantId,
+    binanceId: "N/A",
     wallet: winner.transactionReference ?? "On record",
     country: "-"
   };
@@ -36,6 +36,14 @@ function winnerToParticipant(winner: Winner): WheelParticipant {
 
 function wheelNameLabel(name: string) {
   return name.length > 11 ? `${name.slice(0, 11)}..` : name;
+}
+
+function normalizeFlipDigits(input: string) {
+  const digitsOnly = input.replace(/\D/g, "");
+  if (digitsOnly.length >= 10) {
+    return digitsOnly.slice(0, 10);
+  }
+  return digitsOnly.padEnd(10, "0");
 }
 
 export function MatrixWheelClient({
@@ -49,22 +57,23 @@ export function MatrixWheelClient({
 }) {
   const [participants, setParticipants] = useState<WheelParticipant[]>(initialParticipants.map(toWheelParticipant));
   const [winners, setWinners] = useState<WheelParticipant[]>(initialWinners.map(winnerToParticipant));
+  const [competitionState, setCompetitionState] = useState<Competition>(competition);
   const [showJoin, setShowJoin] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showWinner, setShowWinner] = useState(false);
-  const [activeWinner, setActiveWinner] = useState<WheelParticipant | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
+  const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "A"));
+  const isFlipGame = competitionState.gameType === "flip_to_win";
 
   useEffect(() => {
-    const closeAt = new Date(competition.registrationCloseAt).getTime();
+    const closeAt = new Date(competitionState.registrationCloseAt).getTime();
     const interval = window.setInterval(() => {
       setTimeLeft(Math.max(0, closeAt - Date.now()));
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [competition.registrationCloseAt]);
+  }, [competitionState.registrationCloseAt]);
 
   const timeLabel = useMemo(() => {
     const total = Math.floor(timeLeft / 1000);
@@ -86,33 +95,43 @@ export function MatrixWheelClient({
       .join(", ");
   }, [wheelEntries]);
 
-  const handleSpin = () => {
-    if (!participants.length) {
-      return;
-    }
-
-    const winner = participants[Math.floor(Math.random() * participants.length)];
-    setRotation((value) => value + 1260 + Math.floor(Math.random() * 360));
-    setActiveWinner(winner);
-    setParticipants((current) => current.filter((item) => item.id !== winner.id));
-    setWinners((current) => [winner, ...current]);
-    window.setTimeout(() => setShowWinner(true), 2600);
-  };
-
   async function refreshCompetitionData() {
-    const [participantsResponse, winnersResponse] = await Promise.all([
+    const [participantsResponse, winnersResponse, competitionResponse] = await Promise.all([
       fetch(`/api/public/competitions/${competition.slug}/participants`, { cache: "no-store" }),
-      fetch(`/api/public/competitions/${competition.slug}/winners`, { cache: "no-store" })
+      fetch(`/api/public/competitions/${competition.slug}/winners`, { cache: "no-store" }),
+      fetch(`/api/public/competitions/${competition.slug}`, { cache: "no-store" })
     ]);
     const participantsBody = await participantsResponse.json().catch(() => ({}));
     const winnersBody = await winnersResponse.json().catch(() => ({}));
+    const competitionBody = await competitionResponse.json().catch(() => ({}));
     if (participantsResponse.ok) {
       setParticipants(((participantsBody.participants ?? []) as Participant[]).map(toWheelParticipant));
     }
     if (winnersResponse.ok) {
       setWinners(((winnersBody.winners ?? []) as Winner[]).map(winnerToParticipant));
     }
+    if (competitionResponse.ok && competitionBody.competition) {
+      setCompetitionState(competitionBody.competition as Competition);
+    }
   }
+
+  useEffect(() => {
+    const syncInterval = window.setInterval(() => {
+      refreshCompetitionData().catch(() => undefined);
+    }, 12000);
+    return () => window.clearInterval(syncInterval);
+  }, [competition.slug]);
+
+  useEffect(() => {
+    if (!isFlipGame) {
+      return;
+    }
+    if (!winners.length) {
+      setFlipDigits(Array.from({ length: 10 }, () => "A"));
+      return;
+    }
+    setFlipDigits(normalizeFlipDigits(winners[0].binanceId).split(""));
+  }, [isFlipGame, winners]);
 
   async function joinCompetition(formData: FormData) {
     setJoining(true);
@@ -149,15 +168,32 @@ export function MatrixWheelClient({
   return (
     <>
       <section className="matrix-page-head matrix-wheel-head">
-        <div className="eyebrow">{competition.title}</div>
-        <h1 className="title-lg">Register For The Next Live Spin Event</h1>
-        <p className="matrix-wheel-subline">{competition.status.toUpperCase()}</p>
-        <p className="matrix-wheel-subline matrix-wheel-subline-accent">{competition.announcementText || "Community event is now open."}</p>
-        <div className="wrap" style={{ justifyContent: "center" }}>
-          <Link className="matrix-wheel-cta-primary" href={`/competitions/${competition.slug}`}>Open Competition</Link>
-          <Link className="matrix-wheel-cta-secondary" href={`/competitions/${competition.slug}/leaderboard`}>Leaderboard</Link>
-          <Link className="matrix-wheel-cta-secondary" href={`/competitions/${competition.slug}/winners`}>Winners</Link>
-        </div>
+        <h1 className="title-lg">{competitionState.title.toUpperCase()} - REGISTER NOW FOR THE NEXT EVENT</h1>
+        <p className="matrix-wheel-subline">STARTING</p>
+        <p className="matrix-wheel-subline matrix-wheel-subline-accent">THE FIRST CHANCE WE GET</p>
+      </section>
+
+      <section className="matrix-wheel-steps">
+        <article className="matrix-wheel-step-card">
+          <div className="matrix-wheel-step-number">1</div>
+          <h3>Own $TANK</h3>
+          <p>Hold $TANK in your Web3 wallet to qualify.</p>
+          <a className="matrix-wheel-step-btn" href="https://four.meme/token/0x45075a5d1b236df7ad007fd34294dad2380a4444" target="_blank" rel="noreferrer">
+            Buy Now
+          </a>
+        </article>
+        <article className="matrix-wheel-step-card">
+          <div className="matrix-wheel-step-number">2</div>
+          <h3>Enter Competition</h3>
+          <p>Register with your Binance Nickname, ID and wallet.</p>
+          <button className="matrix-wheel-step-btn" type="button" onClick={() => setShowJoin(true)}>Join Competition</button>
+          <div className="matrix-wheel-step-foot">VISIT MATRIXCLAN.COM/WHEEL TO JOIN</div>
+        </article>
+        <article className="matrix-wheel-step-card">
+          <div className="matrix-wheel-step-number">3</div>
+          <h3>Be Live to Win</h3>
+          <p>You must be present in the live stream to claim your prize!</p>
+        </article>
       </section>
 
       <div className="matrix-wheel-main-grid">
@@ -178,35 +214,83 @@ export function MatrixWheelClient({
           </div>
 
           <section className="matrix-wheel-panel matrix-wheel-panel-upgraded">
-            <div className="matrix-wheel-pointer" />
+            {!isFlipGame ? <div className="matrix-wheel-pointer" /> : null}
             <div className="matrix-wheel-stage">
-              <div
-                className="matrix-wheel-disc"
-                style={{
-                  transform: `rotate(${rotation}deg)`,
-                  background: wheelEntries.length ? `conic-gradient(from -90deg, ${wheelGradient})` : "#000"
-                }}
-              >
-                {wheelEntries.length ? (
-                  <div className="matrix-wheel-labels">
-                    {wheelEntries.map((name, index) => (
-                      <span
-                        key={`${name}-${index}`}
-                        className="matrix-wheel-label-chip"
-                        style={{ transform: `rotate(${(360 / wheelEntries.length) * index}deg) translate(0, -164px) rotate(90deg)` }}
-                      >
-                        {wheelNameLabel(name)}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="matrix-empty-wheel">No Participants</div>
-                )}
-              </div>
+              {isFlipGame ? (
+                <div className="matrix-flip-board">
+                  {flipDigits.map((digit, index) => (
+                    <div key={`${digit}-${index}`} className="matrix-flip-slot">
+                      {digit}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="matrix-wheel-disc"
+                  style={{
+                    transform: `rotate(${rotation}deg)`,
+                    background: wheelEntries.length ? `conic-gradient(from -90deg, ${wheelGradient})` : "#000"
+                  }}
+                >
+                  {wheelEntries.length ? (
+                    <div className="matrix-wheel-labels">
+                      {wheelEntries.map((name, index) => (
+                        <span
+                          key={`${name}-${index}`}
+                          className="matrix-wheel-label-chip"
+                          style={{ transform: `rotate(${(360 / wheelEntries.length) * index}deg) translate(0, -164px) rotate(90deg)` }}
+                        >
+                          {wheelNameLabel(name)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="matrix-empty-wheel">No Participants</div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="matrix-wheel-actions">
               <button className="matrix-wheel-cta-primary" onClick={() => setShowJoin(true)}>Join Now</button>
               <button className="matrix-wheel-cta-secondary" onClick={() => setShowLeaderboard(true)}>Leaderboard</button>
+            </div>
+          </section>
+
+          <section className="matrix-wheel-rules-box">
+            <h2>How To Enter</h2>
+            <ul>
+              <li>1. HOLD $TANK in your wallet.</li>
+              <li>2. REGISTER for the competition.</li>
+              <li>3. BE LIVE in the stream to claim your prize.</li>
+            </ul>
+            <h2>Double Your Prize</h2>
+            <p>Change your Binance Nickname to include &quot; - TEAM MATRIX - TINKTANK&quot; to DOUBLE your standard win!</p>
+            <h2>Prize Pool ($25 BNB)</h2>
+            <ul>
+              <li>Standard Win: $1 BNB (Doubles to $2 with nickname change)</li>
+              <li>Grand Prize (Winner of Winners): $5 BNB (No multiplier)</li>
+              <li>Total Pool: $25 BNB to be won!</li>
+            </ul>
+            <h2>Process &amp; Payments</h2>
+            <ul>
+              <li>Winners are removed from the wheel and added to the Leaderboard.</li>
+              <li>Winner of Winners draw happens at the end of the live.</li>
+              <li>Prizes sent to your supplied wallet within 48 hours.</li>
+            </ul>
+          </section>
+
+          <section className="matrix-wheel-market-box">
+            <h2>Market Data &amp; Tokenomics</h2>
+            <div className="matrix-wheel-market-chart">Loading chart...</div>
+            <div className="matrix-wheel-market-token">
+              <strong>BURNTANK WALLET</strong>
+              <span>0x0000...BURNTANK</span>
+              <small>Click to copy address</small>
+            </div>
+            <div className="matrix-wheel-market-token">
+              <strong>COMMUNITY TREASURY</strong>
+              <span>0x63E2...A576</span>
+              <small>Click to copy address</small>
             </div>
           </section>
         </section>
@@ -237,10 +321,6 @@ export function MatrixWheelClient({
         </aside>
       </div>
 
-      <div className="matrix-wheel-admin-row">
-        <button className="matrix-wheel-cta-accent" onClick={handleSpin}>Spin Wheel (Demo)</button>
-      </div>
-
       {showJoin ? (
         <div className="matrix-modal-backdrop" onClick={() => setShowJoin(false)}>
           <div className="matrix-modal" onClick={(event) => event.stopPropagation()}>
@@ -248,7 +328,7 @@ export function MatrixWheelClient({
             <h2>Join Competition</h2>
             <form action={joinCompetition} className="matrix-form">
               <label><span>Username</span><input name="username" placeholder="Username" required /></label>
-              <label><span>Binance ID</span><input name="binanceId" placeholder="12345678" required /></label>
+              <label><span>Binance ID</span><input name="binanceId" placeholder="1234567890" required /></label>
               <label><span>Wallet</span><input name="wallet" placeholder="0x..." required /></label>
               <label><span>Country</span><input name="country" placeholder="Country" defaultValue="India" /></label>
               <label className="matrix-checkbox"><input type="checkbox" required /> I hold $TANK in this wallet</label>
@@ -278,18 +358,6 @@ export function MatrixWheelClient({
         </div>
       ) : null}
 
-      {showWinner && activeWinner ? (
-        <div className="matrix-modal-backdrop" onClick={() => setShowWinner(false)}>
-          <div className="matrix-modal matrix-winner-modal" onClick={(event) => event.stopPropagation()}>
-            <button className="matrix-modal-close" onClick={() => setShowWinner(false)}>×</button>
-            <h2>WE HAVE A WINNER!</h2>
-            <div className="matrix-winner-emoji">🏆</div>
-            <div className="matrix-winner-name">{activeWinner.username}</div>
-            <div className="matrix-winner-id">ID: {activeWinner.binanceId}</div>
-            <div className="matrix-winner-id">{activeWinner.wallet}</div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

@@ -37,7 +37,7 @@ export async function PATCH(
     const template = updateCompetitionTemplate(id, {
       name: typeof body.name === "string" ? body.name : undefined,
       slug: typeof body.slug === "string" ? body.slug : undefined,
-      mode: body.mode === "quiz" ? "quiz" : body.mode === "wheel" ? "wheel" : undefined,
+      mode: body.mode === "quiz" ? "quiz" : body.mode === "flip" ? "flip" : body.mode === "wheel" ? "wheel" : undefined,
       description: typeof body.description === "string" ? body.description : undefined,
       defaultStatus: typeof body.defaultStatus === "string" ? body.defaultStatus as Competition["status"] : undefined,
       defaultThemeKey: typeof body.defaultThemeKey === "string" ? body.defaultThemeKey : undefined,

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type TemplateForm = {
   name: string;
   slug: string;
-  mode: "wheel" | "quiz";
+  mode: "wheel" | "flip" | "quiz";
   description: string;
   defaultThemeKey: string;
   defaultAnnouncementText: string;
@@ -74,15 +74,16 @@ export function AdminTemplateCreateForm() {
             />
           </label>
           <label className="field">
-            <span>Mode</span>
-            <select
-              value={form.mode}
-              onChange={(event) => setForm((prev) => ({ ...prev, mode: event.target.value as "wheel" | "quiz" }))}
-            >
-              <option value="wheel">wheel</option>
-              <option value="quiz">quiz</option>
-            </select>
-          </label>
+              <span>Mode</span>
+              <select
+                value={form.mode}
+                onChange={(event) => setForm((prev) => ({ ...prev, mode: event.target.value as "wheel" | "flip" | "quiz" }))}
+              >
+                <option value="wheel">wheel</option>
+                <option value="flip">flip</option>
+                <option value="quiz">quiz</option>
+              </select>
+            </label>
           <label className="field">
             <span>Default Theme Key</span>
             <input

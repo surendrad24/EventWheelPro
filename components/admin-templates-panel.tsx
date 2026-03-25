@@ -8,7 +8,7 @@ import type { CompetitionTemplate } from "@/lib/server/admin-config-db";
 type TemplateForm = {
   name: string;
   slug: string;
-  mode: "wheel" | "quiz";
+  mode: "wheel" | "flip" | "quiz";
   description: string;
   defaultThemeKey: string;
   defaultAnnouncementText: string;
@@ -185,9 +185,10 @@ export function AdminTemplatesPanel({ initialTemplates }: { initialTemplates: Co
                 <span>Mode</span>
                 <select
                   value={editForm.mode}
-                  onChange={(event) => setEditForm((prev) => (prev ? { ...prev, mode: event.target.value as "wheel" | "quiz" } : prev))}
+                  onChange={(event) => setEditForm((prev) => (prev ? { ...prev, mode: event.target.value as "wheel" | "flip" | "quiz" } : prev))}
                 >
                   <option value="wheel">wheel</option>
+                  <option value="flip">flip</option>
                   <option value="quiz">quiz</option>
                 </select>
               </label>

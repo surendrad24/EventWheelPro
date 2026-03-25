@@ -2660,23 +2660,31 @@ canvas#matrix-rain,
 
 .matrix-wheel-head .title-lg {
   margin-top: 2px;
-  color: rgba(255, 255, 255, 0.2);
+  margin-bottom: 6px;
+  color: #f5f6f8;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  text-align: center;
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(1.45rem, 3.2vw, 2.3rem);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .matrix-wheel-subline {
   margin: 4px 0 0;
   color: #f4f4f6;
-  font-size: 2rem;
+  font-size: clamp(1.3rem, 2.5vw, 1.9rem);
   font-family: "Share Tech Mono", monospace;
   letter-spacing: 0.2em;
   line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .matrix-wheel-subline-accent {
   color: #ff00cc;
   margin-top: 8px;
+  text-shadow: 0 0 12px rgba(255, 0, 204, 0.5);
 }
 
 .matrix-wheel-step-card {
@@ -2688,6 +2696,7 @@ canvas#matrix-rain,
     rgba(11, 3, 9, 0.92);
   padding: 16px;
   text-align: right;
+  min-height: 152px;
 }
 
 .matrix-wheel-step-number {
@@ -2746,6 +2755,7 @@ canvas#matrix-rain,
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
   gap: 16px;
+  align-items: start;
 }
 
 .matrix-wheel-left,
@@ -2778,6 +2788,7 @@ canvas#matrix-rain,
   text-align: center;
   display: grid;
   place-items: center;
+  padding: 8px;
 }
 
 .matrix-wheel-status-number {
@@ -2856,6 +2867,7 @@ canvas#matrix-rain,
   font-size: 1.18rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  text-shadow: 0 0 10px rgba(255, 0, 204, 0.38);
 }
 
 .matrix-wheel-rules-box p,
@@ -2875,7 +2887,8 @@ canvas#matrix-rain,
   padding: 0 24px;
   min-width: 210px;
   font-family: "Share Tech Mono", monospace;
-  text-transform: capitalize;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .matrix-wheel-cta-primary {
@@ -2937,7 +2950,7 @@ canvas#matrix-rain,
 
 .matrix-wheel-participants-box {
   padding: 14px;
-  min-height: 1290px;
+  min-height: 1040px;
   box-shadow: 0 0 22px rgba(255, 0, 204, 0.24), inset 0 0 0 1px rgba(255, 0, 204, 0.14);
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
@@ -3299,6 +3312,54 @@ canvas#matrix-rain,
   padding: 40px 0 20px;
   display: flex;
   justify-content: center;
+}
+
+.matrix-flip-board {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+  width: min(560px, 100%);
+  padding: 16px;
+  border: 2px solid rgba(255, 0, 204, 0.7);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(26, 8, 15, 0.95), rgba(8, 2, 6, 0.95));
+  box-shadow: 0 0 22px rgba(255, 0, 204, 0.25);
+}
+
+.matrix-flip-slot {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 214, 107, 0.75);
+  background: linear-gradient(180deg, #fff4cc, #e4c56c);
+  color: #201300;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  box-shadow: inset 0 -8px 18px rgba(40, 24, 0, 0.3);
+}
+
+.matrix-flip-slot.flipping {
+  animation: matrixFlipPulse 120ms linear infinite;
+}
+
+@keyframes matrixFlipPulse {
+  0% { transform: translateY(0); filter: brightness(0.95); }
+  50% { transform: translateY(-2px); filter: brightness(1.08); }
+  100% { transform: translateY(0); filter: brightness(0.95); }
+}
+
+@media (max-width: 768px) {
+  .matrix-flip-board {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .matrix-flip-slot {
+    min-height: 52px;
+    font-size: 1.6rem;
+  }
 }
 
 .matrix-wheel-pointer {

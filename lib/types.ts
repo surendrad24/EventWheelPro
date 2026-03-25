@@ -6,6 +6,11 @@ export type CompetitionStatus =
   | "completed"
   | "archived";
 
+export type CompetitionGameType =
+  | "wheel_of_fortune"
+  | "flip_to_win"
+  | "quiz";
+
 export type VerificationStatus =
   | "not_required"
   | "pending"
@@ -129,6 +134,7 @@ export interface Competition {
   slug: string;
   title: string;
   status: CompetitionStatus;
+  gameType: CompetitionGameType;
   themeKey: string;
   description: string;
   announcementText: string;

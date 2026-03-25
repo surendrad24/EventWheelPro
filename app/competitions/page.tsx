@@ -29,7 +29,7 @@ export default async function CompetitionIndexPage({
 
   const participants = store.getParticipants(competition.id);
   const winners = store.listWinners(competition.id);
-  const isQuizMode = competition.themeKey.toLowerCase().includes("quiz");
+  const isQuizMode = competition.gameType === "quiz";
 
   return (
     <MatrixPage>

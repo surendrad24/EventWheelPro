@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const template = createCompetitionTemplate({
       name: String(body.name ?? ""),
       slug: typeof body.slug === "string" ? body.slug : undefined,
-      mode: body.mode === "quiz" ? "quiz" : "wheel",
+      mode: body.mode === "quiz" ? "quiz" : body.mode === "flip" ? "flip" : "wheel",
       description: typeof body.description === "string" ? body.description : undefined,
       defaultStatus: typeof body.defaultStatus === "string" ? body.defaultStatus as Competition["status"] : undefined,
       defaultThemeKey: typeof body.defaultThemeKey === "string" ? body.defaultThemeKey : undefined,

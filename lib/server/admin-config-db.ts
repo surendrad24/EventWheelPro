@@ -22,7 +22,7 @@ export type CompetitionTemplate = {
   id: string;
   name: string;
   slug: string;
-  mode: "wheel" | "quiz";
+  mode: "wheel" | "flip" | "quiz";
   description: string;
   defaultStatus: Competition["status"];
   defaultThemeKey: string;
@@ -37,7 +37,7 @@ type TemplateRow = {
   id: string;
   name: string;
   slug: string;
-  mode: "wheel" | "quiz";
+  mode: "wheel" | "flip" | "quiz";
   description: string;
   defaults_json: string;
   registration_fields_json: string;
@@ -177,6 +177,31 @@ function ensureTemplateDefaults() {
 
   insert.run(
     id("tmpl"),
+    "Binance Weekend Flip",
+    "binance-weekend-flip",
+    "flip",
+    "Flip-to-win live stream competition with Binance ID reveal animation.",
+    JSON.stringify({
+      status: "scheduled",
+      themeKey: "flip",
+      announcementText: "Welcome to the Binance Weekend Flip live event."
+    }),
+    JSON.stringify([
+      { key: "displayName", label: "Display Name", type: "text", required: true, placeholder: "Your display name" },
+      { key: "exchangeId", label: "Binance ID", type: "text", required: true, placeholder: "10-digit Binance ID" },
+      { key: "walletAddress", label: "Wallet", type: "wallet", required: true, placeholder: "0x..." },
+      { key: "country", label: "Country", type: "country", required: true, placeholder: "Country" }
+    ]),
+    JSON.stringify([
+      { id: "f1", label: "Flip Win", description: "Per-flip winner payout", quantity: 20, valueText: "1 BNB" },
+      { id: "f2", label: "Mega Flip", description: "Top winner payout", quantity: 1, valueText: "5 BNB" }
+    ]),
+    ts,
+    ts
+  );
+
+  insert.run(
+    id("tmpl"),
     "Binance Weekend Quiz",
     "binance-weekend-quiz",
     "quiz",
@@ -216,7 +241,7 @@ function toTemplate(row: TemplateRow): CompetitionTemplate {
     mode: row.mode,
     description: row.description,
     defaultStatus: defaults.status ?? "draft",
-    defaultThemeKey: defaults.themeKey ?? (row.mode === "quiz" ? "quiz" : "wheel"),
+    defaultThemeKey: defaults.themeKey ?? (row.mode === "quiz" ? "quiz" : row.mode === "flip" ? "flip" : "wheel"),
     defaultAnnouncementText: defaults.announcementText ?? "",
     registrationFields: parseJson<RegistrationField[]>(row.registration_fields_json, []),
     prizeTiers: parseJson<PrizeTier[]>(row.prize_tiers_json, []),
@@ -299,7 +324,7 @@ export function getCompetitionTemplateById(templateId: string) {
 export function createCompetitionTemplate(input: {
   name: string;
   slug?: string;
-  mode: "wheel" | "quiz";
+  mode: "wheel" | "flip" | "quiz";
   description?: string;
   defaultStatus?: Competition["status"];
   defaultThemeKey?: string;
@@ -335,7 +360,7 @@ export function createCompetitionTemplate(input: {
     input.description?.trim() ?? "",
     JSON.stringify({
       status: input.defaultStatus ?? "draft",
-      themeKey: input.defaultThemeKey ?? (input.mode === "quiz" ? "quiz" : "wheel"),
+      themeKey: input.defaultThemeKey ?? (input.mode === "quiz" ? "quiz" : input.mode === "flip" ? "flip" : "wheel"),
       announcementText: input.defaultAnnouncementText ?? ""
     }),
     JSON.stringify(input.registrationFields ?? []),
@@ -351,7 +376,7 @@ export function updateCompetitionTemplate(
   input: {
     name?: string;
     slug?: string;
-    mode?: "wheel" | "quiz";
+    mode?: "wheel" | "flip" | "quiz";
     description?: string;
     defaultStatus?: Competition["status"];
     defaultThemeKey?: string;
@@ -428,6 +453,11 @@ export function createCompetitionFromTemplate(templateId: string, input?: {
     title,
     slug: input?.slug,
     status: input?.status ?? template.defaultStatus,
+    gameType: template.mode === "quiz"
+      ? "quiz"
+      : template.mode === "flip"
+        ? "flip_to_win"
+        : "wheel_of_fortune",
     themeKey: template.defaultThemeKey,
     description: template.description,
     announcementText: template.defaultAnnouncementText,
