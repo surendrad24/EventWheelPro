@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
+import { requireAdminApiAuth } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
   return NextResponse.json({ competitions: store.listCompetitions() });
 }
 
 export async function POST(request: Request) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
   const body = await request.json().catch(() => ({}));
   try {
     const competition = store.createCompetition(body);

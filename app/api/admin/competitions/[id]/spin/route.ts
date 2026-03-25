@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireAdminApiAuth } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
   const result = store.createSpin(id, typeof body.initiatedBy === "string" ? body.initiatedBy : "admin");

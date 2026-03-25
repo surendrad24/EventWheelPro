@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
+import { requireAdminPageAuth } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 const firstCompetitionId = store.listCompetitions()[0]?.id ?? "comp-1";
@@ -16,7 +17,7 @@ const navItems = [
   { href: "/admin/templates", label: "Templates" }
 ];
 
-export function AdminShell({
+export async function AdminShell({
   title,
   description,
   children
@@ -25,6 +26,8 @@ export function AdminShell({
   description: string;
   children: ReactNode;
 }) {
+  const admin = await requireAdminPageAuth();
+
   return (
     <div className="page shell sidebar-layout">
       <aside className="card admin-nav">
@@ -32,6 +35,7 @@ export function AdminShell({
           <div>
             <div className="eyebrow">Operator Console</div>
             <strong>Event Wheel Pro</strong>
+            <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>{admin.email}</div>
           </div>
           <div className="stack" style={{ gap: 4 }}>
             {navItems.map((item) => (

@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireAdminApiAuth } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 export async function PATCH(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
   const { id } = await params;
   const participant = store.approveParticipant(id);
   if (!participant) {

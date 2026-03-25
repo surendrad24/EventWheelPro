@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireAdminApiAuth } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
   const { id } = await params;
   const competition = store.getCompetitionById(id);
   if (!competition) {
@@ -17,6 +22,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
   const { id } = await params;
   const payload = await request.json().catch(() => ({}));
   const competition = store.patchCompetition(id, payload);
@@ -25,4 +34,3 @@ export async function PATCH(
   }
   return NextResponse.json({ competition });
 }
-
