@@ -41,14 +41,16 @@ export default async function LiveControlPage({
   const participantList = eventParticipants.slice(0, 16);
 
   return (
-    <AdminShell
-      title="Live Control"
-      description="Spin management, fairness logging, and round-by-round winner operations."
-    >
+    <AdminShell title="Live Control" description="Spin management, fairness logging, and round-by-round winner operations.">
       <section className="live-console card card-pad stack">
         <div className="live-console__brand">
           <div className="live-console__brand-title">BINANCE</div>
           <div className="live-console__brand-sub">@EarnPii - TEAM MATRIX</div>
+        </div>
+        <div className="live-console__nav">
+          <div className="live-console__nav-brand">TEAM MATRIX</div>
+          <div className="live-console__nav-links">Tokens • Heroes • Comics • Profile • BTC Wheel</div>
+          <div className="live-console__nav-icons">◉ ◆ ◉ ◉</div>
         </div>
         <div className="ticker">
           <span>
@@ -77,8 +79,11 @@ export default async function LiveControlPage({
             <div className="wrap" style={{ justifyContent: "center" }}>
               <button className="btn">Join Competition</button>
               <button className="btn-secondary">Leaderboard</button>
-              <button className="btn-ghost">Start Spin</button>
             </div>
+            <article className="live-console__mini-note">
+              <strong>How to Join</strong>
+              <div className="muted">Use your Binance nickname + hold required balance + join live chat before draw.</div>
+            </article>
           </article>
           <aside className="live-console__participants">
             <h2 className="section-title">Participants</h2>
@@ -128,7 +133,7 @@ export default async function LiveControlPage({
             ))}
           </article>
         </section>
-
+        <div className="live-console__wave" />
         <div className="live-console__marquee">#TEAMMATRIX - LIVE STREAMING - WELCOME TO BTC PARTY WHEEL</div>
       </section>
     </AdminShell>
