@@ -105,6 +105,23 @@ export interface Spin {
   resultDisplayName: string;
 }
 
+export interface SpinFairnessRecord {
+  id: string;
+  spinId: string;
+  competitionId: string;
+  algorithm: string;
+  serverSeed: string;
+  clientSeed: string;
+  nonce: string;
+  commitHash: string;
+  revealHash: string;
+  poolSize: number;
+  resolvedIndex: number;
+  resolvedParticipantId: string;
+  createdAt: string;
+  verified: boolean;
+}
+
 export interface Competition {
   id: string;
   slug: string;

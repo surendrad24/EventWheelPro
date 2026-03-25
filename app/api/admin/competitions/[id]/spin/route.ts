@@ -12,7 +12,9 @@ export async function POST(
   }
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  const result = store.createSpin(id, typeof body.initiatedBy === "string" ? body.initiatedBy : "admin");
+  const initiatedBy = typeof body.initiatedBy === "string" ? body.initiatedBy : "admin";
+  const clientSeed = typeof body.clientSeed === "string" ? body.clientSeed : undefined;
+  const result = store.createSpin(id, initiatedBy, clientSeed);
 
   if ("error" in result) {
     const status = result.error === "competition_not_found" ? 404 : 400;
@@ -25,6 +27,7 @@ export async function POST(
     rngMode: result.spin.rngMode,
     spin: result.spin,
     winner: result.winner,
-    participant: result.participant
+    participant: result.participant,
+    fairness: result.fairness
   });
 }

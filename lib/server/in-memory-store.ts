@@ -8,7 +8,8 @@ import {
   spins as seedSpins,
   winners as seedWinners
 } from "@/lib/mock-data";
-import type { Competition, EventLog, Participant, Spin, Winner } from "@/lib/types";
+import { computeRevealHash, deriveSpinIndex, randomHex, sha256Hex } from "@/lib/server/fairness";
+import type { Competition, EventLog, Participant, Spin, SpinFairnessRecord, Winner } from "@/lib/types";
 
 type RegistrationPayload = {
   displayName: string;
@@ -111,6 +112,22 @@ type SpinRow = {
   seed_commit_hash: string;
   result_participant_id: string;
   result_display_name: string;
+};
+
+type SpinFairnessRow = {
+  id: string;
+  spin_id: string;
+  competition_id: string;
+  algorithm: string;
+  server_seed: string;
+  client_seed: string;
+  nonce: string;
+  commit_hash: string;
+  reveal_hash: string;
+  pool_size: number;
+  resolved_index: number;
+  resolved_participant_id: string;
+  created_at: string;
 };
 
 type EventLogRow = {
@@ -251,6 +268,34 @@ function toSpin(row: SpinRow): Spin {
   };
 }
 
+function verifyFairnessRow(row: SpinFairnessRow) {
+  const expectedCommit = sha256Hex(row.server_seed);
+  const expectedReveal = computeRevealHash(row.server_seed, row.client_seed, row.nonce);
+  const expectedIndex = deriveSpinIndex(expectedReveal, row.pool_size);
+  return expectedCommit === row.commit_hash
+    && expectedReveal === row.reveal_hash
+    && expectedIndex === row.resolved_index;
+}
+
+function toSpinFairnessRecord(row: SpinFairnessRow): SpinFairnessRecord {
+  return {
+    id: row.id,
+    spinId: row.spin_id,
+    competitionId: row.competition_id,
+    algorithm: row.algorithm,
+    serverSeed: row.server_seed,
+    clientSeed: row.client_seed,
+    nonce: row.nonce,
+    commitHash: row.commit_hash,
+    revealHash: row.reveal_hash,
+    poolSize: row.pool_size,
+    resolvedIndex: row.resolved_index,
+    resolvedParticipantId: row.resolved_participant_id,
+    createdAt: row.created_at,
+    verified: verifyFairnessRow(row)
+  };
+}
+
 function toEventLog(row: EventLogRow): EventLog {
   return {
     id: row.id,
@@ -369,6 +414,25 @@ class SQLiteStore {
         FOREIGN KEY(result_participant_id) REFERENCES participants(id)
       );
 
+      CREATE TABLE IF NOT EXISTS spin_fairness_records (
+        id TEXT PRIMARY KEY,
+        spin_id TEXT NOT NULL UNIQUE,
+        competition_id TEXT NOT NULL,
+        algorithm TEXT NOT NULL,
+        server_seed TEXT NOT NULL,
+        client_seed TEXT NOT NULL,
+        nonce TEXT NOT NULL,
+        commit_hash TEXT NOT NULL,
+        reveal_hash TEXT NOT NULL,
+        pool_size INTEGER NOT NULL,
+        resolved_index INTEGER NOT NULL,
+        resolved_participant_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(spin_id) REFERENCES spins(id),
+        FOREIGN KEY(competition_id) REFERENCES competitions(id),
+        FOREIGN KEY(resolved_participant_id) REFERENCES participants(id)
+      );
+
       CREATE TABLE IF NOT EXISTS event_logs (
         id TEXT PRIMARY KEY,
         competition_id TEXT,
@@ -386,7 +450,21 @@ class SQLiteStore {
       CREATE INDEX IF NOT EXISTS idx_participants_exchange_id ON participants(competition_id, exchange_id);
       CREATE INDEX IF NOT EXISTS idx_winners_competition ON winners(competition_id);
       CREATE INDEX IF NOT EXISTS idx_spins_competition ON spins(competition_id);
+      CREATE INDEX IF NOT EXISTS idx_spin_fairness_competition ON spin_fairness_records(competition_id);
+      CREATE INDEX IF NOT EXISTS idx_spin_fairness_spin ON spin_fairness_records(spin_id);
       CREATE INDEX IF NOT EXISTS idx_event_logs_competition ON event_logs(competition_id);
+
+      CREATE TRIGGER IF NOT EXISTS trg_spin_fairness_no_update
+      BEFORE UPDATE ON spin_fairness_records
+      BEGIN
+        SELECT RAISE(ABORT, 'spin_fairness_records_are_immutable');
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS trg_spin_fairness_no_delete
+      BEFORE DELETE ON spin_fairness_records
+      BEGIN
+        SELECT RAISE(ABORT, 'spin_fairness_records_are_immutable');
+      END;
     `);
   }
 
@@ -927,6 +1005,24 @@ class SQLiteStore {
     return rows.map(toSpin);
   }
 
+  listSpinFairnessRecords(competitionId: string) {
+    const rows = this.db.prepare(`
+      SELECT * FROM spin_fairness_records
+      WHERE competition_id = ?
+      ORDER BY created_at DESC
+    `).all(competitionId) as SpinFairnessRow[];
+    return rows.map(toSpinFairnessRecord);
+  }
+
+  getSpinFairnessRecord(spinId: string) {
+    const row = this.db.prepare(`
+      SELECT * FROM spin_fairness_records
+      WHERE spin_id = ?
+      LIMIT 1
+    `).get(spinId) as SpinFairnessRow | undefined;
+    return row ? toSpinFairnessRecord(row) : null;
+  }
+
   updateWinnerClaimStatus(winnerId: string, claimStatus: Winner["claimStatus"]) {
     const winner = this.db.prepare("SELECT * FROM winners WHERE id = ? LIMIT 1").get(winnerId) as WinnerRow | undefined;
     if (!winner) {
@@ -965,7 +1061,7 @@ class SQLiteStore {
     return toWinner(updated);
   }
 
-  createSpin(competitionId: string, initiatedBy = "admin") {
+  createSpin(competitionId: string, initiatedBy = "admin", clientSeed?: string) {
     const competition = this.getCompetitionById(competitionId);
     if (!competition) {
       return { error: "competition_not_found" as const };
@@ -974,14 +1070,21 @@ class SQLiteStore {
     const poolRows = this.db.prepare(`
       SELECT * FROM participants
       WHERE competition_id = ? AND registration_status = 'approved'
-      ORDER BY joined_at DESC
+      ORDER BY id ASC
     `).all(competitionId) as ParticipantRow[];
 
     if (!poolRows.length) {
       return { error: "no_approved_participants" as const };
     }
 
-    const winnerParticipantRow = poolRows[Math.floor(Math.random() * poolRows.length)];
+    const normalizedClientSeed = (clientSeed ?? "default-client-seed").trim() || "default-client-seed";
+    const nonce = randomHex(8);
+    const serverSeed = randomHex(32);
+    const commitHash = sha256Hex(serverSeed);
+    const revealHash = computeRevealHash(serverSeed, normalizedClientSeed, nonce);
+    const resolvedIndex = deriveSpinIndex(revealHash, poolRows.length);
+
+    const winnerParticipantRow = poolRows[resolvedIndex];
     const winnerParticipant = toParticipant(winnerParticipantRow);
     const winnerCount = this.db.prepare("SELECT COUNT(*) as total FROM winners WHERE competition_id = ?")
       .get(competitionId) as { total: number };
@@ -995,9 +1098,26 @@ class SQLiteStore {
       endedAt: nowIso(),
       initiatedBy,
       rngMode: "server-seeded RNG",
-      seedCommitHash: `0x${Math.random().toString(16).slice(2, 18)}`,
+      seedCommitHash: commitHash,
       resultParticipantId: winnerParticipant.id,
       resultDisplayName: winnerParticipant.displayName
+    };
+
+    const fairnessRecord: SpinFairnessRecord = {
+      id: id("fair"),
+      spinId: spin.id,
+      competitionId,
+      algorithm: "sha256(serverSeed:clientSeed:nonce) -> modulo(poolSize)",
+      serverSeed,
+      clientSeed: normalizedClientSeed,
+      nonce,
+      commitHash,
+      revealHash,
+      poolSize: poolRows.length,
+      resolvedIndex,
+      resolvedParticipantId: winnerParticipant.id,
+      createdAt: nowIso(),
+      verified: true
     };
 
     const winner: Winner = {
@@ -1060,6 +1180,27 @@ class SQLiteStore {
         ts
       );
 
+      this.db.prepare(`
+        INSERT INTO spin_fairness_records (
+          id, spin_id, competition_id, algorithm, server_seed, client_seed, nonce,
+          commit_hash, reveal_hash, pool_size, resolved_index, resolved_participant_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        fairnessRecord.id,
+        fairnessRecord.spinId,
+        fairnessRecord.competitionId,
+        fairnessRecord.algorithm,
+        fairnessRecord.serverSeed,
+        fairnessRecord.clientSeed,
+        fairnessRecord.nonce,
+        fairnessRecord.commitHash,
+        fairnessRecord.revealHash,
+        fairnessRecord.poolSize,
+        fairnessRecord.resolvedIndex,
+        fairnessRecord.resolvedParticipantId,
+        fairnessRecord.createdAt
+      );
+
       if (competition.autoRemoveWinners) {
         this.db.prepare(`
           UPDATE participants
@@ -1081,7 +1222,7 @@ class SQLiteStore {
     const updatedParticipantRow = this.db.prepare("SELECT * FROM participants WHERE id = ? LIMIT 1")
       .get(winnerParticipant.id) as ParticipantRow;
 
-    return { spin, winner, participant: toParticipant(updatedParticipantRow) };
+    return { spin, winner, participant: toParticipant(updatedParticipantRow), fairness: fairnessRecord };
   }
 
   submitClaim(claimToken: string, payload: Record<string, unknown>) {

@@ -44,6 +44,18 @@ npm run dev
   - Payout status updates: `super_admin`, `finance`
 - Admin pages for live-control/participants/payouts/new-competition are also role-gated.
 
+## Fairness engine (phase 5 baseline)
+
+- Spin resolution now uses deterministic fairness logic:
+  - `commitHash = sha256(serverSeed)`
+  - `revealHash = sha256(serverSeed:clientSeed:nonce)`
+  - `resolvedIndex = revealHash mod poolSize`
+- Immutable fairness audit rows are written to `spin_fairness_records` in SQLite.
+  - Updates/deletes are blocked by DB triggers.
+- Fairness proof retrieval endpoints:
+  - `GET /api/admin/competitions/:id/fairness`
+  - `GET /api/admin/spins/:id/fairness`
+
 ## Recommended next steps
 
 1. Migrate SQLite persistence to PostgreSQL with a migration tool (Prisma/Drizzle).
