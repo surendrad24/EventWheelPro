@@ -366,6 +366,198 @@ textarea {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.admin-matrix {
+  --admin-neon: #2dff56;
+  --admin-neon-soft: rgba(45, 255, 86, 0.24);
+  --admin-bg: rgba(0, 6, 2, 0.92);
+  --admin-bg-soft: rgba(0, 17, 6, 0.72);
+  --admin-line: rgba(45, 255, 86, 0.32);
+  color: #d5ffd9;
+}
+
+.admin-matrix::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(0, 255, 76, 0.03) 1px, transparent 1px) 0 0 / 100% 3px,
+    linear-gradient(90deg, rgba(0, 255, 76, 0.02) 1px, transparent 1px) 0 0 / 3px 100%;
+  opacity: 0.33;
+  z-index: 0;
+}
+
+.admin-matrix > * {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-matrix .card {
+  background: var(--admin-bg);
+  border-color: var(--admin-line);
+  box-shadow:
+    0 0 0 1px rgba(45, 255, 86, 0.08),
+    0 0 30px rgba(0, 255, 81, 0.12),
+    inset 0 0 24px rgba(0, 255, 81, 0.06);
+  backdrop-filter: none;
+}
+
+.admin-matrix .card:hover {
+  box-shadow:
+    0 0 0 1px rgba(45, 255, 86, 0.2),
+    0 0 44px rgba(0, 255, 81, 0.17),
+    inset 0 0 30px rgba(0, 255, 81, 0.08);
+}
+
+.admin-matrix .eyebrow {
+  color: #73ff8f;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.14em;
+}
+
+.admin-matrix .title-lg {
+  color: #3eff67;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.05em;
+}
+
+.admin-matrix .muted {
+  color: rgba(167, 255, 179, 0.75);
+}
+
+.admin-matrix .section-title {
+  color: #5dff7f;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-brand {
+  display: inline-block;
+  margin-top: 2px;
+  color: #43ff6c;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.23rem;
+  letter-spacing: 0.16em;
+}
+
+.admin-matrix .admin-nav {
+  background: linear-gradient(180deg, rgba(2, 18, 7, 0.9), rgba(0, 9, 3, 0.94));
+  border-color: var(--admin-line);
+}
+
+.admin-matrix .admin-nav a {
+  color: rgba(150, 255, 170, 0.85);
+  border: 1px solid transparent;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.admin-matrix .admin-nav a:hover {
+  color: #23ff56;
+  border-color: rgba(45, 255, 86, 0.42);
+  box-shadow: inset 0 0 16px rgba(45, 255, 86, 0.09);
+  transform: translateX(2px);
+}
+
+.admin-matrix .btn,
+.admin-matrix .btn-secondary,
+.admin-matrix .btn-ghost {
+  min-height: 40px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 10px;
+  font-family: "Share Tech Mono", monospace;
+}
+
+.admin-matrix .btn {
+  background: linear-gradient(135deg, #29ff55, #7dff1f);
+  color: #031404;
+  border-color: rgba(45, 255, 86, 0.6);
+}
+
+.admin-matrix .btn-secondary {
+  background: linear-gradient(135deg, #ffba3b, #ff8f1f);
+  color: #2a1300;
+  border-color: rgba(255, 178, 62, 0.6);
+}
+
+.admin-matrix .btn-ghost {
+  background: rgba(0, 16, 5, 0.7);
+  color: #73ff90;
+  border-color: rgba(45, 255, 86, 0.45);
+}
+
+.admin-matrix .chip {
+  background: rgba(0, 21, 7, 0.85);
+  border-color: rgba(45, 255, 86, 0.5);
+  color: #8effa5;
+  border-radius: 8px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.admin-matrix .chip.live {
+  background: rgba(0, 40, 14, 0.88);
+  color: #2cff59;
+}
+
+.admin-matrix .chip.warning {
+  background: rgba(44, 22, 2, 0.9);
+  color: #ffb24f;
+}
+
+.admin-matrix .chip.danger {
+  background: rgba(43, 4, 20, 0.9);
+  color: #ff6f9e;
+}
+
+.admin-matrix .table th,
+.admin-matrix .table td {
+  border-bottom-color: rgba(45, 255, 86, 0.16);
+  padding: 12px 10px;
+}
+
+.admin-matrix .table th {
+  color: #86ff9f;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
+.admin-matrix .table tr:hover td {
+  background: rgba(0, 25, 8, 0.45);
+}
+
+.admin-matrix .list-item {
+  border-color: rgba(45, 255, 86, 0.28);
+  background: var(--admin-bg-soft);
+}
+
+.admin-matrix .field input,
+.admin-matrix .field select,
+.admin-matrix .field textarea {
+  border-color: rgba(45, 255, 86, 0.32);
+  background: rgba(0, 12, 4, 0.94);
+  color: #ceffd4;
+}
+
+.admin-matrix .field input:focus,
+.admin-matrix .field select:focus,
+.admin-matrix .field textarea:focus {
+  outline: 1px solid rgba(45, 255, 86, 0.5);
+  box-shadow: 0 0 0 2px rgba(45, 255, 86, 0.1);
+}
+
+.admin-matrix .stat-value {
+  color: #31ff57;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 2.2rem;
+}
+
 .ticker {
   overflow: hidden;
   white-space: nowrap;

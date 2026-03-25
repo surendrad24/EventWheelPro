@@ -30,13 +30,14 @@ export async function AdminShell({
   const admin = await requireAdminPageAuth();
 
   return (
-    <div className="page shell sidebar-layout">
+    <div className="admin-matrix page shell sidebar-layout">
       <aside className="card admin-nav">
         <div className="stack">
           <div>
             <div className="eyebrow">Operator Console</div>
-            <strong>Event Wheel Pro</strong>
+            <strong className="admin-brand">TEAM MATRIX</strong>
             <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>{admin.email}</div>
+            <div className="chip" style={{ marginTop: 8 }}>{admin.role.replaceAll("_", " ")}</div>
           </div>
           <div className="stack" style={{ gap: 4 }}>
             {navItems
@@ -47,6 +48,9 @@ export async function AdminShell({
               </Link>
               ))}
           </div>
+          <form action="/api/admin/auth/logout" method="post">
+            <button type="submit" className="btn-ghost" style={{ width: "100%" }}>Sign out</button>
+          </form>
         </div>
       </aside>
       <main className="stack">
