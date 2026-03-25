@@ -6,11 +6,7 @@ import { StatCard } from "@/components/stat-card";
 import { StatusChip } from "@/components/status-chip";
 import { WheelPreview } from "@/components/wheel-preview";
 import { formatDateTime, formatPercent, timeLeftLabel } from "@/lib/format";
-import {
-  getCompetitionBySlug,
-  getCompetitionParticipants,
-  getCompetitionWinners
-} from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export default async function CompetitionPage({
   params
@@ -18,7 +14,7 @@ export default async function CompetitionPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const maybeCompetition = getCompetitionBySlug(slug);
+  const maybeCompetition = store.getCompetitionBySlug(slug);
 
   if (!maybeCompetition) {
     notFound();
@@ -26,8 +22,8 @@ export default async function CompetitionPage({
 
   const competition = maybeCompetition;
 
-  const eventParticipants = getCompetitionParticipants(competition.id);
-  const eventWinners = getCompetitionWinners(competition.id);
+  const eventParticipants = store.getParticipants(competition.id);
+  const eventWinners = store.listWinners(competition.id);
 
   return (
     <>
@@ -59,10 +55,10 @@ export default async function CompetitionPage({
               <a className="btn" href="#join">
                 Join Competition
               </a>
-              <Link className="btn-secondary" href={`/competition/${competition.slug}/leaderboard`}>
+              <Link className="btn-secondary" href={`/competitions/${competition.slug}/leaderboard`}>
                 Leaderboard
               </Link>
-              <Link className="btn-ghost" href={`/competition/${competition.slug}/winners`}>
+              <Link className="btn-ghost" href={`/competitions/${competition.slug}/winners`}>
                 Winners
               </Link>
             </div>
@@ -153,7 +149,7 @@ export default async function CompetitionPage({
               <strong>Registration closes {formatDateTime(competition.registrationCloseAt)}</strong>
               <div className="muted">Duplicate risk threshold example: {formatPercent(0.18)}</div>
             </div>
-            <Link className="btn-secondary" href="/admin/competitions/comp-1/live-control">
+            <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/live-control`}>
               Operator live control
             </Link>
           </div>

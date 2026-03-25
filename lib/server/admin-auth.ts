@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
-import { AdminRole, SessionAdmin, getAdminBySessionToken } from "@/lib/server/auth-db";
+import { SessionAdmin, canAdminPerform, getAdminBySessionToken } from "@/lib/server/auth-db";
+import { AdminFeature, AdminRole, PermissionAction } from "@/lib/permissions";
 
 export const ADMIN_SESSION_COOKIE = "ew_admin_session";
 
@@ -86,6 +87,34 @@ export async function requireAdminPageAuth() {
 export async function requireAdminPageRole(allowedRoles: AdminRole[]) {
   const admin = await requireAdminPageAuth();
   if (!includesRole(allowedRoles, admin.role)) {
+    redirect("/admin/dashboard");
+  }
+  return admin;
+}
+
+export function requireAdminApiPermission(
+  request: Request,
+  feature: AdminFeature,
+  action: PermissionAction
+) {
+  const auth = requireAdminApiAuth(request);
+  if ("error" in auth) {
+    return auth;
+  }
+  if (!canAdminPerform(auth.admin, feature, action)) {
+    return {
+      error: NextResponse.json({ error: "forbidden" }, { status: 403 })
+    };
+  }
+  return auth;
+}
+
+export async function requireAdminPagePermission(
+  feature: AdminFeature,
+  action: PermissionAction
+) {
+  const admin = await requireAdminPageAuth();
+  if (!canAdminPerform(admin, feature, action)) {
     redirect("/admin/dashboard");
   }
   return admin;

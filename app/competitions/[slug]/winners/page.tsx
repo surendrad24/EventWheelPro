@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { SiteChrome } from "@/components/site-chrome";
 import { StatusChip } from "@/components/status-chip";
 import { formatDateTime } from "@/lib/format";
-import { getCompetitionBySlug, getCompetitionWinners } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export default async function WinnersPage({
   params
@@ -10,7 +10,7 @@ export default async function WinnersPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const maybeCompetition = getCompetitionBySlug(slug);
+  const maybeCompetition = store.getCompetitionBySlug(slug);
 
   if (!maybeCompetition) {
     notFound();
@@ -18,7 +18,7 @@ export default async function WinnersPage({
 
   const competition = maybeCompetition;
 
-  const eventWinners = getCompetitionWinners(competition.id);
+  const eventWinners = store.listWinners(competition.id);
 
   return (
     <>

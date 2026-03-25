@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { AdminParticipantManagement } from "@/components/admin-participant-management";
 import { AdminShell } from "@/components/admin-shell";
-import { StatusChip } from "@/components/status-chip";
-import { formatPercent } from "@/lib/format";
-import { requireAdminPageRole } from "@/lib/server/admin-auth";
+import { requireAdminPagePermission } from "@/lib/server/admin-auth";
+import { canAdminPerform } from "@/lib/server/auth-db";
 import { store } from "@/lib/server/in-memory-store";
 
 export default async function ParticipantsPage({
@@ -10,7 +10,7 @@ export default async function ParticipantsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdminPageRole(["super_admin", "moderator"]);
+  const admin = await requireAdminPagePermission("participants", "view");
 
   const { id } = await params;
   const maybeCompetition = store.getCompetitionById(id);
@@ -20,6 +20,7 @@ export default async function ParticipantsPage({
   }
 
   const competition = maybeCompetition;
+  const competitions = store.listCompetitions();
 
   const eventParticipants = store.getParticipants(id);
 
@@ -28,38 +29,17 @@ export default async function ParticipantsPage({
       title="Participant Management"
       description="Moderation, duplicate review, manual overrides, and wheel eligibility management."
     >
-      <section className="card card-pad">
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <h2 className="section-title">{competition.title}</h2>
-          <div className="wrap">
-            <button className="btn-secondary">Bulk approve</button>
-            <button className="btn-secondary">Import CSV</button>
-            <button className="btn">Export</button>
-          </div>
-        </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Registration</th>
-              <th>Verification</th>
-              <th>Duplicate Risk</th>
-              <th>Country</th>
-            </tr>
-          </thead>
-          <tbody>
-            {eventParticipants.map((participant) => (
-              <tr key={participant.id}>
-                <td>{participant.displayName}</td>
-                <td><StatusChip label={participant.registrationStatus} /></td>
-                <td><StatusChip label={participant.verificationStatus} /></td>
-                <td>{formatPercent(participant.duplicateRiskScore)}</td>
-                <td>{participant.country}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <AdminParticipantManagement
+        competitionId={competition.id}
+        competitionTitle={competition.title}
+        competitionOptions={competitions.map((entry) => ({
+          id: entry.id,
+          title: entry.title
+        }))}
+        initialParticipants={eventParticipants}
+        canEdit={canAdminPerform(admin, "participants", "edit")}
+        canAdd={canAdminPerform(admin, "participants", "add")}
+      />
     </AdminShell>
   );
 }

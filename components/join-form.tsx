@@ -1,4 +1,5 @@
 import { RegistrationField } from "@/lib/types";
+import { COUNTRIES } from "@/lib/countries";
 
 export function JoinForm({ fields }: { fields: RegistrationField[] }) {
   return (
@@ -17,11 +18,11 @@ export function JoinForm({ fields }: { fields: RegistrationField[] }) {
                 <option value="" disabled>
                   {field.placeholder}
                 </option>
-                <option>India</option>
-                <option>United States</option>
-                <option>United Kingdom</option>
-                <option>Brazil</option>
-                <option>Germany</option>
+                {COUNTRIES.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
               </select>
             ) : (
               <input

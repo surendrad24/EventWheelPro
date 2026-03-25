@@ -17,6 +17,8 @@ type RegistrationPayload = {
   exchangeId?: string;
   walletAddress?: string;
   email?: string;
+  xHandle?: string;
+  phone?: string;
   telegramHandle?: string;
   country?: string;
 };
@@ -34,6 +36,29 @@ type CreateCompetitionPayload = Partial<Competition> & {
 };
 
 type PatchCompetitionPayload = Partial<Competition>;
+type UpdateParticipantPayload = Partial<Pick<
+  Participant,
+  | "displayName"
+  | "exchangeNickname"
+  | "exchangeId"
+  | "walletAddress"
+  | "email"
+  | "xHandle"
+  | "phone"
+  | "telegramHandle"
+  | "country"
+  | "registrationStatus"
+  | "verificationStatus"
+  | "duplicateRiskScore"
+>>;
+const COMPETITION_STATUSES: Competition["status"][] = [
+  "draft",
+  "scheduled",
+  "live",
+  "paused",
+  "completed",
+  "archived"
+];
 
 type CompetitionRow = {
   id: string;
@@ -69,6 +94,8 @@ type ParticipantRow = {
   exchange_id: string | null;
   wallet_address: string | null;
   email: string | null;
+  x_handle: string | null;
+  phone: string | null;
   telegram_handle: string | null;
   country: string;
   registration_status: Participant["registrationStatus"];
@@ -218,6 +245,8 @@ function toParticipant(row: ParticipantRow): Participant {
     exchangeId: row.exchange_id ?? undefined,
     walletAddress: row.wallet_address ?? undefined,
     email: row.email ?? undefined,
+    xHandle: row.x_handle ?? undefined,
+    phone: row.phone ?? undefined,
     telegramHandle: row.telegram_handle ?? undefined,
     country: row.country,
     registrationStatus: row.registration_status,
@@ -317,6 +346,7 @@ class SQLiteStore {
     this.db = new Database(DB_PATH);
     this.db.pragma("journal_mode = WAL");
     this.initSchema();
+    this.ensureParticipantColumns();
     this.seedIfNeeded();
   }
 
@@ -358,6 +388,8 @@ class SQLiteStore {
         exchange_id TEXT,
         wallet_address TEXT,
         email TEXT,
+        x_handle TEXT,
+        phone TEXT,
         telegram_handle TEXT,
         country TEXT NOT NULL,
         registration_status TEXT NOT NULL,
@@ -468,6 +500,18 @@ class SQLiteStore {
     `);
   }
 
+  private ensureParticipantColumns() {
+    const columns = this.db.prepare("PRAGMA table_info(participants)").all() as Array<{ name: string }>;
+    const names = new Set(columns.map((column) => column.name));
+
+    if (!names.has("x_handle")) {
+      this.db.exec("ALTER TABLE participants ADD COLUMN x_handle TEXT");
+    }
+    if (!names.has("phone")) {
+      this.db.exec("ALTER TABLE participants ADD COLUMN phone TEXT");
+    }
+  }
+
   private seedIfNeeded() {
     const count = this.db.prepare("SELECT COUNT(*) as total FROM competitions").get() as { total: number };
     if (count.total > 0) {
@@ -488,10 +532,10 @@ class SQLiteStore {
     const insertParticipant = this.db.prepare(`
       INSERT INTO participants (
         id, competition_id, display_name, exchange_nickname, exchange_id, wallet_address,
-        email, telegram_handle, country, registration_status, verification_status,
+        email, x_handle, phone, telegram_handle, country, registration_status, verification_status,
         duplicate_risk_score, joined_at, approved_at, rejected_at, rejected_reason,
         ip_hash, device_fingerprint_hash, recent, wins, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertWinner = this.db.prepare(`
@@ -557,6 +601,8 @@ class SQLiteStore {
           participant.exchangeId ?? null,
           participant.walletAddress ?? null,
           participant.email ?? null,
+          participant.xHandle ?? null,
+          participant.phone ?? null,
           participant.telegramHandle ?? null,
           participant.country,
           participant.registrationStatus,
@@ -682,6 +728,30 @@ class SQLiteStore {
     return row ? toCompetition(row) : undefined;
   }
 
+  private nextCompetitionId() {
+    const rows = this.db.prepare("SELECT id FROM competitions").all() as Array<{ id: string }>;
+    let maxId = 0;
+    const usedIds = new Set(rows.map((row) => row.id));
+
+    for (const row of rows) {
+      const match = /^comp-(\d+)$/.exec(row.id);
+      if (!match) {
+        continue;
+      }
+      const numericId = Number.parseInt(match[1], 10);
+      if (Number.isFinite(numericId) && numericId > maxId) {
+        maxId = numericId;
+      }
+    }
+
+    let candidate = maxId + 1;
+    while (usedIds.has(`comp-${candidate}`)) {
+      candidate += 1;
+    }
+
+    return `comp-${candidate}`;
+  }
+
   createCompetition(payload: CreateCompetitionPayload) {
     const title = (payload.title ?? "").trim();
     if (!title) {
@@ -694,11 +764,16 @@ class SQLiteStore {
       throw new Error("slug_taken");
     }
 
+    const requestedStatus = payload.status;
+    const status = COMPETITION_STATUSES.includes(requestedStatus as Competition["status"])
+      ? (requestedStatus as Competition["status"])
+      : "draft";
+
     const created: Competition = {
-      id: id("comp"),
+      id: this.nextCompetitionId(),
       slug,
       title,
-      status: "draft",
+      status,
       themeKey: payload.themeKey ?? "default",
       description: payload.description ?? "",
       announcementText: payload.announcementText ?? "",
@@ -767,18 +842,84 @@ class SQLiteStore {
     return created;
   }
 
+  cloneCompetition(competitionId: string) {
+    const source = this.getCompetitionById(competitionId);
+    if (!source) {
+      return null;
+    }
+
+    const baseTitle = `${source.title} Copy`;
+    const baseSlug = toSlug(`${source.slug}-copy`) || toSlug(`${source.title}-copy`) || `copy-${Date.now()}`;
+
+    let slug = baseSlug;
+    let index = 2;
+    while (this.getCompetitionBySlug(slug)) {
+      slug = `${baseSlug}-${index}`;
+      index += 1;
+    }
+
+    const cloned = this.createCompetition({
+      ...source,
+      title: baseTitle,
+      slug,
+      status: "draft",
+      recentWinnerIds: [],
+      stats: {
+        totalParticipants: 0,
+        totalApproved: 0,
+        pendingVerification: 0,
+        totalWinners: 0
+      },
+      registrationFields: structuredClone(source.registrationFields),
+      prizeTiers: structuredClone(source.prizeTiers)
+    });
+
+    this.log(
+      "competition.cloned",
+      "competition",
+      cloned.id,
+      `Cloned from ${source.id}`,
+      cloned.id,
+      "admin"
+    );
+
+    return cloned;
+  }
+
   patchCompetition(competitionId: string, payload: PatchCompetitionPayload) {
     const competition = this.getCompetitionById(competitionId);
     if (!competition) {
       return null;
     }
 
+    const maybeTitle = payload.title === undefined ? competition.title : payload.title.trim();
+    if (!maybeTitle) {
+      throw new Error("title_required");
+    }
+
+    const nextSlug = payload.slug ? toSlug(payload.slug) : competition.slug;
+    if (!nextSlug) {
+      throw new Error("slug_required");
+    }
+
+    const slugOwner = this.db.prepare("SELECT id FROM competitions WHERE slug = ? LIMIT 1")
+      .get(nextSlug) as { id: string } | undefined;
+    if (slugOwner && slugOwner.id !== competitionId) {
+      throw new Error("slug_taken");
+    }
+
+    const status = COMPETITION_STATUSES.includes((payload.status ?? competition.status) as Competition["status"])
+      ? (payload.status ?? competition.status) as Competition["status"]
+      : competition.status;
+
     const beforeStatus = competition.status;
     const merged: Competition = {
       ...competition,
       ...payload,
       id: competition.id,
-      slug: payload.slug ? toSlug(payload.slug) : competition.slug,
+      title: maybeTitle,
+      slug: nextSlug,
+      status,
       stats: competition.stats
     };
 
@@ -847,6 +988,27 @@ class SQLiteStore {
     return this.getCompetitionById(competitionId);
   }
 
+  deleteCompetition(competitionId: string) {
+    const exists = this.db.prepare("SELECT id FROM competitions WHERE id = ? LIMIT 1")
+      .get(competitionId) as { id: string } | undefined;
+    if (!exists) {
+      return false;
+    }
+
+    const tx = this.db.transaction(() => {
+      this.db.prepare("DELETE FROM spin_fairness_records WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM winners WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM spins WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM participants WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM event_logs WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM competitions WHERE id = ?").run(competitionId);
+    });
+
+    tx();
+    this.log("competition.deleted", "competition", competitionId, `Deleted competition ${competitionId}`, competitionId, "admin");
+    return true;
+  }
+
   getDashboard(): DashboardStats {
     const activeEvents = this.db.prepare("SELECT COUNT(*) as total FROM competitions WHERE status = 'live'").get() as { total: number };
     const totalParticipants = this.db.prepare("SELECT COUNT(*) as total FROM participants").get() as { total: number };
@@ -865,6 +1027,11 @@ class SQLiteStore {
     const rows = this.db.prepare("SELECT * FROM participants WHERE competition_id = ? ORDER BY joined_at DESC")
       .all(competitionId) as ParticipantRow[];
     return rows.map(toParticipant);
+  }
+
+  getParticipantById(participantId: string) {
+    const row = this.db.prepare("SELECT * FROM participants WHERE id = ? LIMIT 1").get(participantId) as ParticipantRow | undefined;
+    return row ? toParticipant(row) : null;
   }
 
   approveParticipant(participantId: string) {
@@ -905,12 +1072,111 @@ class SQLiteStore {
     return toParticipant(updated);
   }
 
-  registerBySlug(slug: string, payload: RegistrationPayload) {
-    const competition = this.getCompetitionBySlug(slug);
-    if (!competition) {
-      return { error: "competition_not_found" as const };
+  updateParticipant(participantId: string, payload: UpdateParticipantPayload) {
+    const participant = this.db.prepare("SELECT * FROM participants WHERE id = ? LIMIT 1").get(participantId) as ParticipantRow | undefined;
+    if (!participant) {
+      return null;
     }
 
+    const displayName = payload.displayName === undefined
+      ? participant.display_name
+      : payload.displayName.trim();
+    if (!displayName) {
+      throw new Error("display_name_required");
+    }
+
+    const exchangeId = payload.exchangeId === undefined
+      ? participant.exchange_id
+      : payload.exchangeId?.trim() || null;
+    const walletAddress = payload.walletAddress === undefined
+      ? participant.wallet_address
+      : payload.walletAddress?.trim() || null;
+
+    if (walletAddress) {
+      const existingWallet = this.db.prepare(`
+        SELECT id FROM participants
+        WHERE competition_id = ? AND wallet_address = ? AND id != ?
+        LIMIT 1
+      `).get(participant.competition_id, walletAddress, participantId) as { id: string } | undefined;
+      if (existingWallet) {
+        throw new Error("duplicate_wallet");
+      }
+    }
+
+    if (exchangeId) {
+      const existingExchange = this.db.prepare(`
+        SELECT id FROM participants
+        WHERE competition_id = ? AND exchange_id = ? AND id != ?
+        LIMIT 1
+      `).get(participant.competition_id, exchangeId, participantId) as { id: string } | undefined;
+      if (existingExchange) {
+        throw new Error("duplicate_exchange_id");
+      }
+    }
+
+    this.db.prepare(`
+      UPDATE participants
+      SET display_name = ?,
+          exchange_nickname = ?,
+          exchange_id = ?,
+          wallet_address = ?,
+          email = ?,
+          x_handle = ?,
+          phone = ?,
+          telegram_handle = ?,
+          country = ?,
+          registration_status = ?,
+          verification_status = ?,
+          duplicate_risk_score = ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(
+      displayName,
+      payload.exchangeNickname === undefined ? participant.exchange_nickname : (payload.exchangeNickname?.trim() || null),
+      exchangeId,
+      walletAddress,
+      payload.email === undefined ? participant.email : (payload.email?.trim() || null),
+      payload.xHandle === undefined ? participant.x_handle : (payload.xHandle?.trim() || null),
+      payload.phone === undefined ? participant.phone : (payload.phone?.trim() || null),
+      payload.telegramHandle === undefined ? participant.telegram_handle : (payload.telegramHandle?.trim() || null),
+      payload.country === undefined ? participant.country : (payload.country.trim() || "Unknown"),
+      payload.registrationStatus ?? participant.registration_status,
+      payload.verificationStatus ?? participant.verification_status,
+      payload.duplicateRiskScore ?? participant.duplicate_risk_score,
+      nowIso(),
+      participantId
+    );
+
+    this.syncCompetitionStats(participant.competition_id);
+    this.log("participant.updated", "participant", participantId, `Updated ${displayName}`, participant.competition_id, "moderator");
+    const updated = this.db.prepare("SELECT * FROM participants WHERE id = ? LIMIT 1").get(participantId) as ParticipantRow;
+    return toParticipant(updated);
+  }
+
+  deleteParticipant(participantId: string) {
+    const participant = this.db.prepare("SELECT * FROM participants WHERE id = ? LIMIT 1").get(participantId) as ParticipantRow | undefined;
+    if (!participant) {
+      return null;
+    }
+
+    this.db.prepare(`
+      UPDATE participants
+      SET registration_status = 'removed',
+          verification_status = 'manual_override',
+          rejected_at = ?,
+          rejected_reason = ?,
+          recent = 0,
+          updated_at = ?
+      WHERE id = ?
+    `).run(nowIso(), "Deleted by admin", nowIso(), participantId);
+
+    this.syncCompetitionStats(participant.competition_id);
+    this.log("participant.deleted", "participant", participantId, `Deleted ${participant.display_name}`, participant.competition_id, "moderator");
+    const updated = this.db.prepare("SELECT * FROM participants WHERE id = ? LIMIT 1").get(participantId) as ParticipantRow;
+    return toParticipant(updated);
+  }
+
+  private registerForCompetition(competition: Competition, payload: RegistrationPayload, actor: "public" | "admin") {
     const displayName = (payload.displayName || "").trim();
     if (!displayName) {
       return { error: "display_name_required" as const };
@@ -944,6 +1210,8 @@ class SQLiteStore {
       exchangeId,
       walletAddress,
       email: payload.email?.trim(),
+      xHandle: payload.xHandle?.trim(),
+      phone: payload.phone?.trim(),
       telegramHandle: payload.telegramHandle?.trim(),
       country: payload.country?.trim() || "Unknown",
       registrationStatus: competition.verificationMode === "manual review" ? "pending_review" : "approved",
@@ -959,10 +1227,10 @@ class SQLiteStore {
     this.db.prepare(`
       INSERT INTO participants (
         id, competition_id, display_name, exchange_nickname, exchange_id, wallet_address,
-        email, telegram_handle, country, registration_status, verification_status,
+        email, x_handle, phone, telegram_handle, country, registration_status, verification_status,
         duplicate_risk_score, joined_at, approved_at, rejected_at, rejected_reason,
         ip_hash, device_fingerprint_hash, recent, wins, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       participant.id,
       participant.competitionId,
@@ -971,6 +1239,8 @@ class SQLiteStore {
       participant.exchangeId ?? null,
       participant.walletAddress ?? null,
       participant.email ?? null,
+      participant.xHandle ?? null,
+      participant.phone ?? null,
       participant.telegramHandle ?? null,
       participant.country,
       participant.registrationStatus,
@@ -989,8 +1259,26 @@ class SQLiteStore {
     );
 
     this.syncCompetitionStats(competition.id);
-    this.log("participant.joined", "participant", participant.id, `Registered ${participant.displayName}`, competition.id, "public");
+    this.log("participant.joined", "participant", participant.id, `Registered ${participant.displayName}`, competition.id, actor);
     return { participant };
+  }
+
+  registerBySlug(slug: string, payload: RegistrationPayload) {
+    const competition = this.getCompetitionBySlug(slug);
+    if (!competition) {
+      return { error: "competition_not_found" as const };
+    }
+
+    return this.registerForCompetition(competition, payload, "public");
+  }
+
+  registerForCompetitionId(competitionId: string, payload: RegistrationPayload) {
+    const competition = this.getCompetitionById(competitionId);
+    if (!competition) {
+      return { error: "competition_not_found" as const };
+    }
+
+    return this.registerForCompetition(competition, payload, "admin");
   }
 
   listWinners(competitionId: string) {

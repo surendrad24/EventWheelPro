@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminCloneCompetitionButton } from "@/components/admin-clone-competition-button";
+import { CompetitionEditorForm } from "@/components/competition-editor-form";
 import { StatCard } from "@/components/stat-card";
+import { requireAdminPagePermission } from "@/lib/server/admin-auth";
+import { canAdminPerform } from "@/lib/server/auth-db";
 import { store } from "@/lib/server/in-memory-store";
 
 export default async function CompetitionDetailPage({
@@ -9,6 +13,7 @@ export default async function CompetitionDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const admin = await requireAdminPagePermission("competitions", "view");
   const { id } = await params;
   const maybeCompetition = store.getCompetitionById(id);
 
@@ -25,6 +30,7 @@ export default async function CompetitionDetailPage({
         <StatCard label="Pending" value={competition.stats.pendingVerification} hint="Awaiting review" />
         <StatCard label="Winners" value={competition.stats.totalWinners} hint="Recorded results" />
       </section>
+      <CompetitionEditorForm mode="edit" competition={competition} />
       <section className="card card-pad stack">
         <h2 className="section-title">Competition actions</h2>
         <div className="wrap">
@@ -32,6 +38,9 @@ export default async function CompetitionDetailPage({
           <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/live-control`}>Live control</Link>
           <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/winners`}>Winners</Link>
           <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/payouts`}>Payouts</Link>
+          {canAdminPerform(admin, "competitions", "add") && (
+            <AdminCloneCompetitionButton competitionId={competition.id} className="btn-ghost" label="Clone competition" />
+          )}
         </div>
       </section>
     </AdminShell>

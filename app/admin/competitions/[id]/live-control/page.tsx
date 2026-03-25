@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
 import { WheelPreview } from "@/components/wheel-preview";
 import { formatDateTime } from "@/lib/format";
-import { requireAdminPageRole } from "@/lib/server/admin-auth";
+import { requireAdminPagePermission } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 function getTimeLeft(targetIso: string) {
@@ -21,7 +21,7 @@ export default async function LiveControlPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdminPageRole(["super_admin", "moderator"]);
+  await requireAdminPagePermission("live_control", "view");
 
   const { id } = await params;
   const maybeCompetition = store.getCompetitionById(id);
@@ -45,16 +45,16 @@ export default async function LiveControlPage({
       <section className="live-console card card-pad stack">
         <div className="live-console__brand">
           <div className="live-console__brand-title">BINANCE</div>
-          <div className="live-console__brand-sub">@EarnPii - TEAM MATRIX</div>
+          <div className="live-console__brand-sub">@EarnPii - FUSION MATRIX</div>
         </div>
         <div className="live-console__nav">
-          <div className="live-console__nav-brand">TEAM MATRIX</div>
-          <div className="live-console__nav-links">Tokens • Heroes • Comics • Profile • BTC Wheel</div>
+          <div className="live-console__nav-brand">FUSION MATRIX</div>
+          <div className="live-console__nav-links">Tokens • Heroes • Comics • Profile • Competitions</div>
           <div className="live-console__nav-icons">◉ ◆ ◉ ◉</div>
         </div>
         <div className="ticker">
           <span>
-            MATRIXCLAN.COM/WHEEL Welcome to the BTC Team Matrix Party. Please provide ID to be added. By TinkTank on four.meme.
+            MATRIXCLAN.COM/WHEEL Welcome to the BTC Fusion Matrix Party. Please provide ID to be added. By TinkTank on four.meme.
           </span>
         </div>
 

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { SiteChrome } from "@/components/site-chrome";
 import { StatusChip } from "@/components/status-chip";
-import { getCompetitionBySlug, getCompetitionParticipants } from "@/lib/mock-data";
+import { store } from "@/lib/server/in-memory-store";
 
 export default async function LeaderboardPage({
   params
@@ -9,7 +9,7 @@ export default async function LeaderboardPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const maybeCompetition = getCompetitionBySlug(slug);
+  const maybeCompetition = store.getCompetitionBySlug(slug);
 
   if (!maybeCompetition) {
     notFound();
@@ -17,7 +17,7 @@ export default async function LeaderboardPage({
 
   const competition = maybeCompetition;
 
-  const ranked = [...getCompetitionParticipants(competition.id)].sort((a, b) => b.wins - a.wins);
+  const ranked = [...store.getParticipants(competition.id)].sort((a, b) => b.wins - a.wins);
 
   return (
     <>

@@ -5,7 +5,7 @@ export default function HeroesPage() {
   return (
     <MatrixPage>
       <section className="matrix-page-head matrix-heroes-head">
-        <div className="eyebrow">TEAM MATRIX HEROES</div>
+        <div className="eyebrow">FUSION MATRIX HEROES</div>
         <h1 className="title-lg">Meet The Defenders Of Assets</h1>
         <p>Elite crypto guardians protecting the network, one block at a time.</p>
         <div className="matrix-page-metrics">

@@ -4,7 +4,7 @@ export default function ProfilePage() {
   return (
     <MatrixPage>
       <section className="matrix-page-head matrix-profile-head">
-        <div className="eyebrow">Team Matrix - Profile Image Editor</div>
+        <div className="eyebrow">Fusion Matrix - Profile Image Editor</div>
         <h1 className="title-lg">Create your Matrix profile image</h1>
         <p>Build a branded avatar with the Matrix frame so your profile stands out across Telegram, X, and Binance communities.</p>
       </section>

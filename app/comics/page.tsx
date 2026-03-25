@@ -5,8 +5,8 @@ export default function ComicsPage() {
   return (
     <MatrixPage>
       <section className="matrix-page-head matrix-comics-head">
-        <div className="eyebrow">TEAM MATRIX Comics</div>
-        <h1 className="title-lg">Follow the adventures of Team Matrix in our comic series</h1>
+        <div className="eyebrow">FUSION MATRIX Comics</div>
+        <h1 className="title-lg">Follow the adventures of Fusion Matrix in our comic series</h1>
         <p>Every volume expands the Matrix lore with new villains, alliances, and token-powered battles.</p>
       </section>
 
@@ -25,7 +25,7 @@ export default function ComicsPage() {
       </section>
 
       <section className="matrix-comics-footer-note">
-        <p>New chapters are announced first in the Team Matrix community channels.</p>
+        <p>New chapters are announced first in the Fusion Matrix community channels.</p>
       </section>
     </MatrixPage>
   );

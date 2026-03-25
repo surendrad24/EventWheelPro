@@ -25,7 +25,7 @@ export default function TankPage() {
           <h1 className="matrix-tank-title">TINKTANK</h1>
           <h2 className="matrix-tank-symbol">$TANK</h2>
           <p className="matrix-tank-tagline">Unleashing Fairy Power on the Blockchain</p>
-          <p className="matrix-tank-subline">Community-Driven by TEAM MATRIX</p>
+          <p className="matrix-tank-subline">Community-Driven by FUSION MATRIX</p>
           <div className="matrix-tank-cta-row">
             <a href="#" className="matrix-tank-cta-primary"><i className="fas fa-cart-shopping" /> Buy Now on four.meme</a>
             <a href="#" className="matrix-tank-cta-secondary"><i className="fas fa-share-nodes" /> Share $TANK</a>
@@ -99,13 +99,13 @@ export default function TankPage() {
           <article className="matrix-tank-info-card matrix-tank-info-single">
             <h2>About TinkTank</h2>
             <p>
-              TinkTank ($TANK) is where the sass and magic of Tinkerbell meets the unstoppable force of a battle-ready tank, all wrapped in that iconic Matrix green glow. This is a movement by TEAM MATRIX to build wealth for our community through the power of memes and blockchain technology.
+              TinkTank ($TANK) is where the sass and magic of Tinkerbell meets the unstoppable force of a battle-ready tank, all wrapped in that iconic Matrix green glow. This is a movement by FUSION MATRIX to build wealth for our community through the power of memes and blockchain technology.
             </p>
           </article>
           <article className="matrix-tank-info-card matrix-tank-info-single">
             <h2>Our Vision</h2>
             <p>
-              TEAM MATRIX is committed to building wealth for our community. Through TinkTank, we are creating opportunities for everyone to participate in the exciting world of cryptocurrency and meme tokens. Together, we grow stronger, and together, we succeed.
+              FUSION MATRIX is committed to building wealth for our community. Through TinkTank, we are creating opportunities for everyone to participate in the exciting world of cryptocurrency and meme tokens. Together, we grow stronger, and together, we succeed.
             </p>
           </article>
         </section>

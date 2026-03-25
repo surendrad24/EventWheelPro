@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAdminApiAuth } from "@/lib/server/admin-auth";
+import { requireAdminApiPermission } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdminApiAuth(request, ["super_admin", "moderator", "finance"]);
+  const auth = requireAdminApiPermission(request, "live_control", "view");
   if ("error" in auth) {
     return auth.error;
   }

@@ -3,7 +3,7 @@ export const matrixNav = [
   { label: "Heroes", href: "/heroes" },
   { label: "Comics", href: "/comics" },
   { label: "Profile", href: "/profile" },
-  { label: "BTC Wheel", href: "/wheel" }
+  { label: "Competitions", href: "/competitions" }
 ];
 
 export const matrixLanguages = [
@@ -96,7 +96,7 @@ export const matrixComics = [
     volume: "Volume 1",
     image: "https://matrixclan.com/assets/images/comics/volume1_cover_rebranded.png",
     summary:
-      "The first adventure of Team Matrix as they defend the crypto world against the Bear attack on Bitcoin.",
+      "The first adventure of Fusion Matrix as they defend the crypto world against the Bear attack on Bitcoin.",
     released: "Available now"
   },
   {
@@ -112,7 +112,7 @@ export const matrixComics = [
     volume: "Volume 3",
     image: "https://matrixclan.com/assets/images/comics/volume3_cover.png",
     summary:
-      "A quantum computing breakthrough threatens crypto security, and only Team Matrix can stop it.",
+      "A quantum computing breakthrough threatens crypto security, and only Fusion Matrix can stop it.",
     released: "Coming soon"
   }
 ];

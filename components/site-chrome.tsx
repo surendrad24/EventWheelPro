@@ -10,7 +10,7 @@ export function SiteChrome() {
         </div>
         <nav className="wrap">
           <Link href="/">Home</Link>
-          <Link href="/competition/solstice-surge">Live Event</Link>
+          <Link href="/competitions/solstice-surge">Live Event</Link>
           <Link href="/admin/dashboard">Admin</Link>
           <Link href="/rules">Rules</Link>
         </nav>

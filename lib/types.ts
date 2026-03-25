@@ -52,6 +52,8 @@ export interface Participant {
   exchangeId?: string;
   walletAddress?: string;
   email?: string;
+  xHandle?: string;
+  phone?: string;
   telegramHandle?: string;
   country: string;
   registrationStatus: RegistrationStatus;

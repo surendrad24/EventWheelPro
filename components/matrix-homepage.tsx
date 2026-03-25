@@ -31,6 +31,13 @@ type Character = {
   reverse?: boolean;
 };
 
+type HeaderCompetition = {
+  id: string;
+  slug: string;
+  title: string;
+  status: string;
+};
+
 const slides: Slide[] = [
   { name: "AlondraCrypto", role: "The Pink Guardian", token: "$BNB (Binance)", image: "https://matrixclan.com/assets/images/characters/optimized/alondracrypto_slider_1920.png" },
   { name: "Elex-Rocks", role: "The Cyborg Analyst", token: "$ETH (Ethereum)", image: "https://matrixclan.com/assets/images/characters/optimized/elexrocks_slider_1920.png" },
@@ -161,7 +168,11 @@ const binanceRefs: Record<string, string> = {
   ovmars: "https://accounts.binance.com/register?ref=61172094"
 };
 
-export function MatrixHomepage() {
+export function MatrixHomepage({
+  competitions = []
+}: {
+  competitions?: HeaderCompetition[];
+}) {
   useEffect(() => {
     const hamburger = document.querySelector<HTMLElement>(".hamburger-menu");
     const mobileMenu = document.querySelector<HTMLElement>(".mobile-menu");
@@ -255,7 +266,7 @@ export function MatrixHomepage() {
           <div className="container">
             <div className="row align-items-center">
               <div className="col-md-3 col-6">
-                <a href="/" className="logo matrix-gradient-text matrix-font">TEAM MATRIX</a>
+                <a href="/" className="logo matrix-gradient-text matrix-font">FUSION MATRIX</a>
               </div>
 
               <div className="col-md-6 desktop-nav">
@@ -265,7 +276,23 @@ export function MatrixHomepage() {
                     <li className="nav-item"><a className="nav-link" href="/heroes">Heroes</a></li>
                     <li className="nav-item"><a className="nav-link" href="/comics">Comics</a></li>
                     <li className="nav-item"><a className="nav-link" href="/profile">Profile</a></li>
-                    <li className="nav-item"><a className="nav-link nav-link-btc-wheel" href="/wheel">BTC Wheel</a></li>
+                    <li className="nav-item matrix-competitions-nav-item">
+                      <a className="nav-link nav-link-btc-wheel" href="/competitions">Competitions</a>
+                      {competitions.length > 0 ? (
+                        <div className="matrix-competitions-dropdown">
+                          {competitions.map((competition) => (
+                            <a
+                              key={competition.id}
+                              href={`/competitions?competition=${encodeURIComponent(competition.slug)}`}
+                              className="matrix-competition-option"
+                            >
+                              <span>{competition.title}</span>
+                              <em>{competition.status}</em>
+                            </a>
+                          ))}
+                        </div>
+                      ) : null}
+                    </li>
                   </ul>
                 </nav>
               </div>
@@ -278,7 +305,7 @@ export function MatrixHomepage() {
                       <a href="https://x.com/keanuleafes" target="_blank" className="socials-option" rel="noreferrer"><i className="fab fa-square-x-twitter" /><span>X: Follow on X</span></a>
                       <a href="https://t.me/CryptoMatrixTeam" target="_blank" className="socials-option" rel="noreferrer"><i className="fab fa-telegram" /><span>TG: Follow on TG</span></a>
                       <a href="#" target="_blank" className="socials-option" rel="noreferrer"><i className="fab fa-square-instagram" /><span>IG: Follow on IG</span></a>
-                      <a href="https://music.youtube.com/channel/UCz0wa0vRsJGiWfHx_yoo9vw" target="_blank" className="socials-option" rel="noreferrer"><i className="fab fa-youtube" /><span>Team Matrix Music</span></a>
+                      <a href="https://music.youtube.com/channel/UCz0wa0vRsJGiWfHx_yoo9vw" target="_blank" className="socials-option" rel="noreferrer"><i className="fab fa-youtube" /><span>Fusion Matrix Music</span></a>
                     </div>
                   </div>
 
@@ -338,7 +365,17 @@ export function MatrixHomepage() {
               <li><a href="/heroes">Heroes</a></li>
               <li><a href="/comics">Comics</a></li>
               <li><a href="/profile">Profile</a></li>
-              <li><a href="/wheel">BTC Wheel</a></li>
+            </ul>
+          </div>
+
+          <div className="mobile-menu-section">
+            <div className="mobile-menu-toggle" data-target="competitions-submenu"><span>Competitions</span><i className="fas fa-caret-down" /></div>
+            <ul className="mobile-submenu" id="competitions-submenu">
+              {competitions.map((competition) => (
+                <li key={competition.id}>
+                  <a href={`/competitions?competition=${encodeURIComponent(competition.slug)}`}>{competition.title}</a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -362,7 +399,7 @@ export function MatrixHomepage() {
               <li><a href="https://x.com/keanuleafes" target="_blank" rel="noreferrer"><i className="fab fa-square-x-twitter" /><span>X: Follow on X</span></a></li>
               <li><a href="https://t.me/CryptoMatrixTeam" target="_blank" rel="noreferrer"><i className="fab fa-telegram" /><span>TG: Follow on TG</span></a></li>
               <li><a href="#" target="_blank" rel="noreferrer"><i className="fab fa-square-instagram" /><span>IG: Follow on IG</span></a></li>
-              <li><a href="https://music.youtube.com/channel/UCz0wa0vRsJGiWfHx_yoo9vw" target="_blank" rel="noreferrer"><i className="fab fa-youtube" /><span>Team Matrix Music</span></a></li>
+              <li><a href="https://music.youtube.com/channel/UCz0wa0vRsJGiWfHx_yoo9vw" target="_blank" rel="noreferrer"><i className="fab fa-youtube" /><span>Fusion Matrix Music</span></a></li>
             </ul>
           </div>
 
@@ -430,7 +467,7 @@ export function MatrixHomepage() {
           <div className="container">
             <div className="row">
               <div className="col-12">
-                <p>© 2026 TEAM MATRIX. All Rights Reserved. | Version 12.7.28</p>
+                <p>© 2026 <a href="https://fusionlancers.com/" target="_blank" rel="noreferrer">FUSIONLANCERS TECHNOLOGIES</a>.  All Rights Reserved. | Version 0.1.0</p>
                 <div className="social-icons d-flex justify-content-center mt-3">
                   <a href="#" target="_blank" rel="noreferrer"><i className="fab fa-square-x-twitter" /></a>
                   <a href="https://t.me/CryptoMatrixTeam" target="_blank" rel="noreferrer"><i className="fab fa-telegram" /></a>
@@ -521,6 +558,55 @@ export function MatrixHomepage() {
           overflow-wrap: normal !important;
           display: inline-block !important;
           line-height: 1 !important;
+        }
+
+        .matrix-mirror-root .matrix-competitions-nav-item {
+          position: relative;
+        }
+
+        .matrix-mirror-root .matrix-competitions-dropdown {
+          position: absolute;
+          top: calc(100% + 10px);
+          left: 50%;
+          transform: translateX(-50%);
+          min-width: 320px;
+          background: rgba(0, 0, 0, 0.96);
+          border: 1px solid rgba(0, 255, 0, 0.4);
+          border-radius: 12px;
+          padding: 10px;
+          box-shadow: 0 0 18px rgba(0, 255, 0, 0.2);
+          display: none;
+          z-index: 40;
+        }
+
+        .matrix-mirror-root .matrix-competitions-nav-item:hover .matrix-competitions-dropdown {
+          display: block;
+        }
+
+        .matrix-mirror-root .matrix-competition-option {
+          width: 100%;
+          border: 1px solid rgba(0, 255, 0, 0.28);
+          border-radius: 10px;
+          background: rgba(0, 20, 0, 0.7);
+          color: #b1ffbb;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 9px 11px;
+          margin-bottom: 8px;
+          text-align: left;
+          text-decoration: none;
+        }
+
+        .matrix-mirror-root .matrix-competition-option:last-child {
+          margin-bottom: 0;
+        }
+
+        .matrix-mirror-root .matrix-competition-option em {
+          color: #59ff7d;
+          font-style: normal;
+          font-size: 0.75rem;
+          text-transform: uppercase;
         }
 
         @media (max-width: 768px) {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 type BinanceHero = {
   id: string;
@@ -32,7 +33,20 @@ const binanceHeroes: BinanceHero[] = [
   { id: "ovmars", name: "OVMARS", referral: "https://accounts.binance.com/register?ref=61172094", color: "#9932cc" }
 ];
 
-export function MatrixHeader() {
+export function MatrixHeader({
+  competitions = []
+}: {
+  competitions?: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    themeKey: string;
+    status: string;
+  }>;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [activeCompetitionSlug, setActiveCompetitionSlug] = useState(competitions[0]?.slug ?? "");
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<string | null>(null);
@@ -61,6 +75,11 @@ export function MatrixHeader() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setActiveCompetitionSlug(params.get("competition") ?? competitions[0]?.slug ?? "");
+  }, [pathname, competitions]);
+
+  useEffect(() => {
     if (!mobileOpen) {
       setMobileSection(null);
     }
@@ -71,8 +90,7 @@ export function MatrixHeader() {
       { href: "/tank", label: "Tokens" },
       { href: "/heroes", label: "Heroes" },
       { href: "/comics", label: "Comics" },
-      { href: "/profile", label: "Profile" },
-      { href: "/wheel", label: "BTC Wheel" }
+      { href: "/profile", label: "Profile" }
     ],
     []
   );
@@ -92,7 +110,7 @@ export function MatrixHeader() {
         <div className="shell matrix-header-shell">
           <div className="matrix-header-left">
             <Link href="/" className="logo matrix-gradient-text matrix-font">
-              TEAM MATRIX
+              FUSION MATRIX
             </Link>
           </div>
 
@@ -107,7 +125,27 @@ export function MatrixHeader() {
                 <li className="nav-item"><Link className="nav-link" href="/heroes">Heroes</Link></li>
                 <li className="nav-item"><Link className="nav-link" href="/comics">Comics</Link></li>
                 <li className="nav-item"><Link className="nav-link" href="/profile">Profile</Link></li>
-                <li className="nav-item"><Link className="nav-link nav-link-btc-wheel" href="/wheel">BTC Wheel</Link></li>
+                <li className="nav-item matrix-competitions-nav-item">
+                  <Link className="nav-link nav-link-btc-wheel" href="/competitions">Competitions</Link>
+                  {competitions.length > 0 ? (
+                    <div className="matrix-competitions-dropdown">
+                      {competitions.map((competition) => (
+                        <button
+                          key={competition.id}
+                          type="button"
+                          className={`matrix-competition-option ${activeCompetitionSlug === competition.slug ? "active" : ""}`}
+                          onClick={() => {
+                            setActiveCompetitionSlug(competition.slug);
+                            router.push(`/competitions?competition=${encodeURIComponent(competition.slug)}`);
+                          }}
+                        >
+                          <span>{competition.title}</span>
+                          <em>{competition.status}</em>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </li>
               </ul>
             </nav>
           </div>
@@ -133,7 +171,7 @@ export function MatrixHeader() {
                   </a>
                   <a href="https://music.youtube.com/channel/UCz0wa0vRsJGiWfHx_yoo9vw" target="_blank" rel="noreferrer" className="socials-option">
                     <i className="fab fa-youtube" />
-                    <span>Team Matrix Music</span>
+                    <span>Fusion Matrix Music</span>
                   </a>
                 </div>
               </div>
@@ -231,6 +269,22 @@ export function MatrixHeader() {
         </div>
 
         <div className="mobile-menu-section">
+          <button type="button" className={`mobile-menu-toggle ${mobileSection === "competitions" ? "active" : ""}`} onClick={() => toggleSection("competitions")}>
+            <span>Competitions</span>
+            <i className="fas fa-caret-down" />
+          </button>
+          <ul className={`mobile-submenu ${mobileSection === "competitions" ? "open" : ""}`}>
+            {competitions.map((competition) => (
+              <li key={competition.id}>
+                <Link href={`/competitions?competition=${encodeURIComponent(competition.slug)}`} onClick={closeMobileMenu}>
+                  {competition.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mobile-menu-section">
           <button type="button" className={`mobile-menu-toggle ${mobileSection === "binance" ? "active" : ""}`} onClick={() => toggleSection("binance")}>
             <span>Find Us on Binance</span>
             <i className="fas fa-caret-down" />
@@ -280,7 +334,7 @@ export function MatrixHeader() {
             <li>
               <a href="https://music.youtube.com/channel/UCz0wa0vRsJGiWfHx_yoo9vw" target="_blank" rel="noreferrer">
                 <i className="fab fa-youtube" />
-                <span>Team Matrix Music</span>
+                <span>Fusion Matrix Music</span>
               </a>
             </li>
           </ul>

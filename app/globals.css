@@ -205,6 +205,51 @@ textarea {
   background: linear-gradient(135deg, #ffb9c9, #ff6f91);
 }
 
+.chip.status-approved,
+.chip.status-passed,
+.chip.status-verified,
+.chip.status-paid,
+.chip.status-live {
+  background: linear-gradient(135deg, #8dff7f, #2dff56);
+  color: #042a08;
+}
+
+.chip.status-pending,
+.chip.status-pending-review,
+.chip.status-processing {
+  background: linear-gradient(135deg, #ffe07a, #ffac2f);
+  color: #362000;
+}
+
+.chip.status-flagged-duplicate {
+  background: linear-gradient(135deg, #ff73da, #ff37aa);
+  color: #2d0020;
+}
+
+.chip.status-manual-override {
+  background: linear-gradient(135deg, #75f7ff, #34d5ff);
+  color: #002733;
+}
+
+.chip.status-rejected,
+.chip.status-failed,
+.chip.status-expired {
+  background: linear-gradient(135deg, #ff8ba8, #ff537f);
+  color: #350312;
+}
+
+.chip.status-won {
+  background: linear-gradient(135deg, #f5ff72, #e5ff22);
+  color: #313700;
+}
+
+.chip.status-registered,
+.chip.status-not-required,
+.chip.status-not-applicable {
+  background: linear-gradient(135deg, #d2d8ea, #aeb9d1);
+  color: #1f2738;
+}
+
 .wheel {
   aspect-ratio: 1;
   width: min(100%, 520px);
@@ -426,6 +471,115 @@ textarea {
   letter-spacing: 0.05em;
 }
 
+.admin-login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 20%, rgba(0, 32, 9, 0.4), #000 60%);
+}
+
+.admin-login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(0, 255, 76, 0.04) 1px, transparent 1px) 0 0 / 100% 3px,
+    linear-gradient(90deg, rgba(0, 255, 76, 0.025) 1px, transparent 1px) 0 0 / 3px 100%;
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.admin-login-rain {
+  opacity: 0.24;
+  background: radial-gradient(circle at 50% 0%, rgba(0, 24, 7, 0.48), rgba(0, 0, 0, 0.95));
+}
+
+.admin-login-wrap {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-login-logo {
+  text-align: center;
+  color: #41ff6b;
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(45, 255, 86, 0.45), 0 0 34px rgba(45, 255, 86, 0.24);
+}
+
+.admin-login-card {
+  background: rgba(0, 8, 2, 0.92);
+  border: 1px solid rgba(45, 255, 86, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(45, 255, 86, 0.14),
+    0 0 42px rgba(0, 255, 81, 0.2),
+    inset 0 0 26px rgba(0, 255, 81, 0.08);
+  backdrop-filter: none;
+}
+
+.admin-login-card .eyebrow {
+  color: #7bff96;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.14em;
+}
+
+.admin-login-card .title-lg {
+  color: #48ff71;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.06em;
+  font-size: clamp(1.35rem, 3.8vw, 2rem);
+}
+
+.admin-login-card .muted {
+  color: rgba(174, 255, 188, 0.78);
+}
+
+.admin-login-card .field span {
+  color: #84ff9e;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.admin-login-card .field input {
+  border-color: rgba(45, 255, 86, 0.4);
+  background: rgba(0, 14, 4, 0.95);
+  color: #d5ffdc;
+  border-radius: 10px;
+}
+
+.admin-login-card .field input:focus {
+  outline: 1px solid rgba(45, 255, 86, 0.55);
+  box-shadow: 0 0 0 2px rgba(45, 255, 86, 0.14), inset 0 0 12px rgba(45, 255, 86, 0.12);
+}
+
+.admin-login-card .btn {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(45, 255, 86, 0.75);
+  background: linear-gradient(135deg, #2cff56, #8dff2d);
+  color: #021605;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(45, 255, 86, 0.2);
+}
+
+.admin-login-card .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 24px rgba(45, 255, 86, 0.28);
+}
+
 .admin-matrix .muted {
   color: rgba(167, 255, 179, 0.75);
 }
@@ -444,6 +598,132 @@ textarea {
   font-family: "Share Tech Mono", monospace;
   font-size: 1.23rem;
   letter-spacing: 0.16em;
+}
+
+.admin-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.admin-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  border: 2px solid rgba(45, 255, 86, 0.75);
+  box-shadow: 0 0 16px rgba(45, 255, 86, 0.35);
+  object-fit: cover;
+  background: rgba(0, 13, 4, 0.92);
+}
+
+.admin-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #66ff86;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+}
+
+.admin-user-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.admin-user-row-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(45, 255, 86, 0.72);
+  box-shadow: 0 0 10px rgba(45, 255, 86, 0.28);
+  object-fit: cover;
+  background: rgba(0, 13, 4, 0.92);
+  flex-shrink: 0;
+}
+
+.admin-user-row-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #74ff92;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+}
+
+.admin-matrix .user-role-chip,
+.admin-matrix .user-status-chip {
+  min-width: 88px;
+  justify-content: center;
+  padding: 6px 12px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 10px;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-matrix .user-role-super-admin {
+  background: rgba(29, 55, 4, 0.9);
+  border-color: rgba(196, 255, 67, 0.8);
+  color: #d9ff6f;
+  box-shadow: inset 0 0 12px rgba(164, 255, 65, 0.14), 0 0 12px rgba(164, 255, 65, 0.16);
+}
+
+.admin-matrix .user-role-admin {
+  background: rgba(7, 66, 20, 0.9);
+  border-color: rgba(45, 255, 86, 0.76);
+  color: #66ff8b;
+  box-shadow: inset 0 0 12px rgba(45, 255, 86, 0.14), 0 0 12px rgba(45, 255, 86, 0.16);
+}
+
+.admin-matrix .user-role-moderator {
+  background: rgba(4, 45, 58, 0.9);
+  border-color: rgba(89, 229, 255, 0.76);
+  color: #6fecff;
+  box-shadow: inset 0 0 12px rgba(89, 229, 255, 0.14), 0 0 12px rgba(89, 229, 255, 0.14);
+}
+
+.admin-matrix .user-role-finance {
+  background: rgba(66, 39, 2, 0.92);
+  border-color: rgba(255, 191, 72, 0.84);
+  color: #ffd46d;
+  box-shadow: inset 0 0 12px rgba(255, 191, 72, 0.14), 0 0 12px rgba(255, 191, 72, 0.14);
+}
+
+.admin-matrix .user-status-active {
+  background: rgba(7, 66, 20, 0.95);
+  border-color: rgba(45, 255, 86, 0.82);
+  color: #4aff72;
+  box-shadow: 0 0 14px rgba(45, 255, 86, 0.26), inset 0 0 11px rgba(45, 255, 86, 0.16);
+}
+
+.admin-matrix .user-status-inactive {
+  background: rgba(54, 5, 17, 0.95);
+  border-color: rgba(255, 114, 150, 0.8);
+  color: #ff83a8;
+  box-shadow: 0 0 14px rgba(255, 114, 150, 0.22), inset 0 0 11px rgba(255, 114, 150, 0.14);
+}
+
+.admin-matrix .user-status-online {
+  background: rgba(4, 78, 24, 0.96);
+  border-color: rgba(45, 255, 86, 0.9);
+  color: #7fff9c;
+  box-shadow: 0 0 16px rgba(45, 255, 86, 0.34), inset 0 0 12px rgba(45, 255, 86, 0.22);
+}
+
+.admin-display-name {
+  margin-top: -2px;
+  margin-bottom: 6px;
+  text-align: center;
+  color: #93ffab;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
 }
 
 .admin-matrix .admin-nav {
@@ -520,6 +800,83 @@ textarea {
   color: #ff6f9e;
 }
 
+.admin-matrix .chip.status-approved,
+.admin-matrix .chip.status-passed,
+.admin-matrix .chip.status-verified,
+.admin-matrix .chip.status-paid,
+.admin-matrix .chip.status-live {
+  background: rgba(7, 66, 20, 0.95);
+  color: #49ff71;
+  border-color: rgba(45, 255, 86, 0.75);
+  box-shadow: 0 0 14px rgba(45, 255, 86, 0.28);
+}
+
+.admin-matrix .chip.status-pending,
+.admin-matrix .chip.status-pending-review,
+.admin-matrix .chip.status-processing {
+  background: rgba(66, 39, 2, 0.95);
+  color: #ffd15d;
+  border-color: rgba(255, 191, 72, 0.8);
+}
+
+.admin-matrix .chip.status-flagged-duplicate {
+  background: rgba(56, 4, 44, 0.95);
+  color: #ff62d1;
+  border-color: rgba(255, 67, 180, 0.82);
+}
+
+.admin-matrix .chip.status-manual-override {
+  background: rgba(4, 45, 58, 0.95);
+  color: #63e8ff;
+  border-color: rgba(89, 229, 255, 0.75);
+}
+
+.admin-matrix .chip.status-rejected,
+.admin-matrix .chip.status-failed,
+.admin-matrix .chip.status-expired {
+  background: rgba(54, 5, 17, 0.95);
+  color: #ff7199;
+  border-color: rgba(255, 114, 150, 0.8);
+}
+
+.admin-matrix .chip.status-won {
+  background: rgba(63, 66, 1, 0.95);
+  color: #f2ff5d;
+  border-color: rgba(229, 255, 72, 0.8);
+}
+
+.admin-matrix .chip.status-registered,
+.admin-matrix .chip.status-not-required,
+.admin-matrix .chip.status-not-applicable {
+  background: rgba(32, 36, 48, 0.95);
+  color: #c4d0ea;
+  border-color: rgba(176, 190, 220, 0.75);
+}
+
+.admin-matrix .chip.risk-low {
+  background: rgba(7, 66, 20, 0.95);
+  color: #49ff71;
+  border-color: rgba(45, 255, 86, 0.7);
+}
+
+.admin-matrix .chip.risk-medium {
+  background: rgba(66, 39, 2, 0.95);
+  color: #ffd15d;
+  border-color: rgba(255, 191, 72, 0.78);
+}
+
+.admin-matrix .chip.risk-high {
+  background: rgba(56, 4, 44, 0.95);
+  color: #ff62d1;
+  border-color: rgba(255, 67, 180, 0.8);
+}
+
+.admin-matrix .chip.risk-critical {
+  background: rgba(54, 5, 17, 0.95);
+  color: #ff7199;
+  border-color: rgba(255, 114, 150, 0.8);
+}
+
 .admin-matrix .table th,
 .admin-matrix .table td {
   border-bottom-color: rgba(45, 255, 86, 0.16);
@@ -555,6 +912,95 @@ textarea {
 .admin-matrix .field textarea:focus {
   outline: 1px solid rgba(45, 255, 86, 0.5);
   box-shadow: 0 0 0 2px rgba(45, 255, 86, 0.1);
+}
+
+.admin-matrix .matrix-neon-select {
+  border-color: rgba(45, 255, 86, 0.6);
+  background:
+    linear-gradient(180deg, rgba(0, 24, 7, 0.95), rgba(0, 12, 4, 0.95)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%232dff56' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center, right 12px center;
+  background-size: auto, 16px;
+  color: #2dff56;
+  font-family: "Share Tech Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 10px rgba(45, 255, 86, 0.12);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 36px;
+}
+
+.admin-matrix .matrix-neon-select:hover {
+  border-color: rgba(45, 255, 86, 0.8);
+  box-shadow: inset 0 0 14px rgba(45, 255, 86, 0.2), 0 0 12px rgba(45, 255, 86, 0.16);
+}
+
+.admin-matrix .matrix-neon-select option,
+.admin-matrix .field select option {
+  background: #06170b !important;
+  color: #b9ffca !important;
+}
+
+.admin-matrix textarea,
+.admin-matrix .table textarea,
+.admin-matrix .table input,
+.admin-matrix .table input[type="text"],
+.admin-matrix .table input[type="email"],
+.admin-matrix .table input[type="search"],
+.admin-matrix .table input[type="url"],
+.admin-matrix .table input[type="tel"] {
+  background: rgba(0, 14, 5, 0.96) !important;
+  color: #d3ffdb !important;
+  border: 1px solid rgba(45, 255, 86, 0.36) !important;
+}
+
+.admin-matrix textarea:focus,
+.admin-matrix .table textarea:focus,
+.admin-matrix .table input[type="text"]:focus,
+.admin-matrix .table input[type="email"]:focus,
+.admin-matrix .table input[type="search"]:focus,
+.admin-matrix .table input[type="url"]:focus,
+.admin-matrix .table input[type="tel"]:focus {
+  outline: 1px solid rgba(45, 255, 86, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(45, 255, 86, 0.12) !important;
+}
+
+.admin-matrix select,
+.admin-matrix .table select,
+.admin-matrix .matrix-neon-select {
+  background-color: #06170b !important;
+  color: #c8ffd5 !important;
+}
+
+.admin-matrix select option,
+.admin-matrix .table select option,
+.admin-matrix .matrix-neon-select option {
+  background-color: #06170b !important;
+  color: #c8ffd5 !important;
+}
+
+.admin-matrix select option:checked,
+.admin-matrix .table select option:checked,
+.admin-matrix .matrix-neon-select option:checked {
+  background-color: #09301a !important;
+  color: #e2ffea !important;
+}
+
+.admin-matrix input:-webkit-autofill,
+.admin-matrix input:-webkit-autofill:hover,
+.admin-matrix input:-webkit-autofill:focus,
+.admin-matrix textarea:-webkit-autofill,
+.admin-matrix textarea:-webkit-autofill:hover,
+.admin-matrix textarea:-webkit-autofill:focus,
+.admin-matrix select:-webkit-autofill,
+.admin-matrix select:-webkit-autofill:hover,
+.admin-matrix select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #d3ffdb !important;
+  box-shadow: 0 0 0 1000px #06170b inset !important;
+  transition: background-color 9999s ease-out 0s;
 }
 
 .admin-matrix .stat-value {
@@ -1028,6 +1474,17 @@ textarea {
   color: #6ce96c;
   position: relative;
   z-index: 1;
+}
+
+.matrix-footer a,
+.matrix-mirror-root footer a {
+  color: #70ff91;
+  text-decoration: none;
+}
+
+.matrix-footer a:hover,
+.matrix-mirror-root footer a:hover {
+  text-shadow: 0 0 10px rgba(70, 255, 111, 0.72);
 }
 
 #matrix-rain-container,
@@ -3531,6 +3988,79 @@ canvas#matrix-rain,
   width: 100%;
 }
 
+.matrix-competition-select {
+  margin-left: 12px;
+  min-width: 220px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #00a84f;
+  background: rgba(0, 20, 0, 0.92);
+  color: #88ffa0;
+  font-family: "Teko", sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  padding: 0 12px;
+}
+
+.matrix-competitions-nav-item {
+  position: relative;
+}
+
+.matrix-competitions-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 320px;
+  background: rgba(0, 0, 0, 0.96);
+  border: 1px solid rgba(0, 255, 0, 0.4);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.2);
+  display: none;
+  z-index: 40;
+}
+
+.matrix-competitions-nav-item:hover .matrix-competitions-dropdown {
+  display: block;
+}
+
+.matrix-competition-option {
+  width: 100%;
+  border: 1px solid rgba(0, 255, 0, 0.28);
+  border-radius: 10px;
+  background: rgba(0, 20, 0, 0.7);
+  color: #b1ffbb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 11px;
+  margin-bottom: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.matrix-competition-option:last-child {
+  margin-bottom: 0;
+}
+
+.matrix-competition-option span {
+  font-size: 0.9rem;
+}
+
+.matrix-competition-option em {
+  color: #59ff7d;
+  font-style: normal;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.matrix-competition-option:hover,
+.matrix-competition-option.active {
+  border-color: rgba(0, 255, 0, 0.62);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.22);
+}
+
 .nav-badge {
   display: inline-block;
   margin-left: 6px;
@@ -3584,6 +4114,194 @@ canvas#matrix-rain,
 
 .matrix-header-parity .socials-dropdown {
   position: relative;
+}
+
+.matrix-quiz-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.matrix-quiz-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.matrix-quiz-metrics article {
+  border: 1px solid rgba(0, 255, 0, 0.45);
+  border-radius: 12px;
+  background: rgba(0, 14, 0, 0.7);
+  padding: 14px;
+  text-align: center;
+}
+
+.matrix-quiz-metrics strong {
+  display: block;
+  color: #3dff6f;
+  font-size: 2rem;
+  font-family: "Share Tech Mono", monospace;
+}
+
+.matrix-quiz-metrics span {
+  color: rgba(170, 255, 186, 0.84);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matrix-quiz-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.matrix-quiz-card {
+  border: 1px solid rgba(0, 255, 0, 0.42);
+  border-radius: 14px;
+  background: rgba(0, 10, 0, 0.72);
+  padding: 18px;
+}
+
+.matrix-quiz-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.matrix-quiz-card h2 {
+  margin: 0;
+  color: #32ff61;
+  font-size: 1.5rem;
+}
+
+.matrix-quiz-timer {
+  min-width: 80px;
+  text-align: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 213, 0, 0.55);
+  color: #ffe149;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.05rem;
+  padding: 6px 12px;
+}
+
+.matrix-quiz-prompt {
+  margin: 16px 0 12px;
+  color: #d7ffe0;
+}
+
+.matrix-quiz-options {
+  display: grid;
+  gap: 10px;
+}
+
+.matrix-quiz-option {
+  border: 1px solid rgba(0, 255, 0, 0.36);
+  border-radius: 10px;
+  background: rgba(0, 18, 0, 0.78);
+  color: #cbffd5;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.matrix-quiz-option:hover,
+.matrix-quiz-option.active {
+  border-color: rgba(0, 255, 0, 0.72);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.matrix-quiz-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.matrix-quiz-feedback {
+  margin-top: 10px;
+  color: #4dff70;
+  font-family: "Share Tech Mono", monospace;
+}
+
+.matrix-quiz-leaderboard {
+  margin-top: 12px;
+  max-height: 440px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.matrix-quiz-rank-row {
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 10px;
+  background: rgba(0, 16, 0, 0.72);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.matrix-quiz-rank-row span {
+  color: #8dff9f;
+}
+
+.matrix-quiz-rank-row strong {
+  color: #d8ffe0;
+}
+
+.matrix-quiz-rank-row em {
+  font-style: normal;
+  color: #56ff7c;
+}
+
+.matrix-quiz-foot-links {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+}
+
+.matrix-quiz-foot-links a {
+  color: #66ff83;
+  text-decoration: none;
+}
+
+.matrix-quiz-foot-links a:hover {
+  text-shadow: 0 0 10px rgba(58, 255, 109, 0.7);
+}
+
+.matrix-image-crop-preview {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(45, 255, 86, 0.5);
+  background: rgba(0, 10, 0, 0.88);
+}
+
+.matrix-image-crop-preview img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+@media (max-width: 980px) {
+  .matrix-quiz-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .matrix-quiz-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .matrix-header-parity .socials-icon {

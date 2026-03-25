@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     revokeAdminSessionByToken(token);
   }
 
-  const response = NextResponse.json({ message: "logout_successful" });
+  const response = NextResponse.redirect(new URL("/admin/login", request.url), { status: 303 });
   clearAdminSessionCookie(response);
   return response;
 }

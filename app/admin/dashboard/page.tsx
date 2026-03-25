@@ -1,8 +1,10 @@
 import { AdminShell } from "@/components/admin-shell";
 import { StatCard } from "@/components/stat-card";
+import { requireAdminPagePermission } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  await requireAdminPagePermission("dashboard", "view");
   const competitions = store.listCompetitions();
   const dashboard = store.getDashboard();
   const recentLogs = store.getLogs().slice(0, 8);
