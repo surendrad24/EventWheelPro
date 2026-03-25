@@ -2,10 +2,12 @@ import { Participant } from "@/lib/types";
 
 export function WheelPreview({
   entrants,
-  highlight
+  highlight,
+  theme = "default"
 }: {
   entrants: Participant[];
   highlight?: string;
+  theme?: "default" | "matrix";
 }) {
   const visibleEntrants = entrants.slice(0, 10);
   const angleStep = 360 / Math.max(visibleEntrants.length, 1);
@@ -13,7 +15,7 @@ export function WheelPreview({
   return (
     <div>
       <div className="wheel-pointer" />
-      <div className="wheel">
+      <div className={`wheel ${theme === "matrix" ? "wheel--matrix" : ""}`}>
         <div className="wheel-labels">
           {visibleEntrants.map((entrant, index) => {
             const angle = index * angleStep - 72;

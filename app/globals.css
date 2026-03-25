@@ -419,6 +419,218 @@ textarea {
   }
 }
 
+.live-console {
+  background: radial-gradient(circle at 35% 0%, rgba(6, 44, 12, 0.38), rgba(2, 6, 3, 0.96));
+  border-color: rgba(0, 255, 80, 0.45);
+  box-shadow: 0 0 34px rgba(0, 255, 64, 0.16), inset 0 0 26px rgba(0, 255, 90, 0.07);
+}
+
+.live-console .card {
+  background: rgba(2, 10, 3, 0.9);
+  border-color: rgba(0, 255, 76, 0.38);
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.12);
+}
+
+.live-console .section-title {
+  color: #58ff7a;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.live-console__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 255, 72, 0.35);
+  padding-bottom: 8px;
+}
+
+.live-console__brand-title {
+  color: #ffd82a;
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.live-console__brand-sub {
+  font-family: "Share Tech Mono", monospace;
+  color: #95ffaf;
+  font-size: 0.85rem;
+}
+
+.live-console__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.live-stat {
+  border: 1px solid rgba(30, 255, 76, 0.5);
+  border-radius: 12px;
+  background: rgba(0, 32, 5, 0.5);
+  text-align: center;
+  padding: 10px;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.live-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 18px rgba(0, 255, 76, 0.28);
+}
+
+.live-stat__value {
+  color: #31ff58;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.live-stat__label {
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(130, 255, 154, 0.88);
+  font-size: 0.66rem;
+}
+
+.live-console__main {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+}
+
+.live-console__wheel-panel {
+  border: 1px solid rgba(0, 255, 76, 0.35);
+  border-radius: 14px;
+  background: rgba(0, 5, 0, 0.66);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.live-console__participants {
+  border: 1px solid rgba(0, 255, 76, 0.42);
+  border-radius: 14px;
+  background: rgba(0, 7, 0, 0.74);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.live-console__participant-list {
+  max-height: 366px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.live-console__participant-item {
+  border: 1px solid rgba(0, 255, 76, 0.35);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: rgba(0, 22, 4, 0.56);
+}
+
+.live-console__participant-item strong {
+  color: #5fff72;
+  font-size: 0.86rem;
+}
+
+.live-console__participant-item .muted {
+  color: rgba(120, 255, 146, 0.76);
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
+
+.live-console__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.live-console__marquee {
+  color: #00ff42;
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(1.15rem, 2.4vw, 2rem);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.live-console__marquee::after {
+  content: "  #TEAMMATRIX - LIVE STREAMING - WELCOME TO BTC PARTY WHEEL";
+  animation: ticker-slide 14s linear infinite;
+  display: inline-block;
+  padding-left: 32px;
+}
+
+.wheel.wheel--matrix {
+  border: 4px solid #1dff4f;
+  box-shadow:
+    0 0 28px rgba(16, 255, 84, 0.45),
+    inset 0 0 34px rgba(0, 255, 79, 0.22);
+}
+
+.wheel.wheel--matrix::before {
+  background: repeating-conic-gradient(
+    from 0deg,
+    #00ff3d 0deg 3deg,
+    #84ff00 3deg 6deg,
+    #2efa00 6deg 9deg,
+    #d8ff00 9deg 12deg
+  );
+  inset: -4%;
+}
+
+.wheel.wheel--matrix::after {
+  inset: 38%;
+  border: 2px solid rgba(20, 255, 78, 0.7);
+  background: radial-gradient(circle, rgba(0, 9, 1, 0.98), rgba(0, 2, 0, 0.92));
+}
+
+.wheel.wheel--matrix .wheel-label {
+  color: #071307;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.74rem;
+  text-shadow: none;
+}
+
+.wheel.wheel--matrix .wheel-center strong {
+  color: #24ff55;
+  font-size: 0.84rem;
+  font-family: "Share Tech Mono", monospace;
+}
+
+.wheel.wheel--matrix .wheel-center .eyebrow {
+  color: rgba(112, 255, 132, 0.7);
+  font-size: 0.58rem;
+}
+
+@media (max-width: 1080px) {
+  .live-console__main {
+    grid-template-columns: 1fr;
+  }
+
+  .live-console__details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .live-console__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .live-console__brand {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 .matrix-header {
   position: sticky;
   top: 0;
