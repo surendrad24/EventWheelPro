@@ -28,9 +28,15 @@ npm run dev
   - `DEMO_ADMIN_EMAIL`
   - `DEMO_ADMIN_PASSWORD`
 
+## Data persistence (phase 3 baseline)
+
+- Competition, participant, winner, spin, and event-log data is now persisted in SQLite tables.
+- Store implementation remains exposed through `lib/server/in-memory-store.ts` for API compatibility, but it is now DB-backed.
+- Seed data from `lib/mock-data.ts` is inserted once when the database has no competition rows.
+
 ## Recommended next steps
 
-1. Move competition/participant/winner/spin data from in-memory store to PostgreSQL.
+1. Migrate SQLite persistence to PostgreSQL with a migration tool (Prisma/Drizzle).
 2. Add role-based permissions (`super_admin`, `moderator`, `finance`) and policy checks.
 3. Implement server-side registration validation and stronger duplicate detection.
 4. Add a fairness module with deterministic seed commit/reveal and immutable spin records.
