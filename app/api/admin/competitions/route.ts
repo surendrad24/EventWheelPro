@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = requireAdminApiAuth(request);
+  const auth = requireAdminApiAuth(request, ["super_admin"]);
   if ("error" in auth) {
     return auth.error;
   }

@@ -21,18 +21,28 @@ npm run dev
 ## Admin auth (phase 2 baseline)
 
 - Admin sessions are now DB-backed using SQLite (`data/event-wheel.db`) and secure HTTP-only cookies.
-- Default local login:
-  - Email: `admin@eventwheelpro.local`
-  - Password: `admin123`
+- Default local logins:
+  - `super_admin`: `admin@eventwheelpro.local` / `admin123`
+  - `moderator`: `moderator@eventwheelpro.local` / `moderator123`
+  - `finance`: `finance@eventwheelpro.local` / `finance123`
 - Override defaults with env vars:
-  - `DEMO_ADMIN_EMAIL`
-  - `DEMO_ADMIN_PASSWORD`
+  - `DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD`
+  - `DEMO_MODERATOR_EMAIL`, `DEMO_MODERATOR_PASSWORD`
+  - `DEMO_FINANCE_EMAIL`, `DEMO_FINANCE_PASSWORD`
 
 ## Data persistence (phase 3 baseline)
 
 - Competition, participant, winner, spin, and event-log data is now persisted in SQLite tables.
 - Store implementation remains exposed through `lib/server/in-memory-store.ts` for API compatibility, but it is now DB-backed.
 - Seed data from `lib/mock-data.ts` is inserted once when the database has no competition rows.
+
+## RBAC (phase 4 baseline)
+
+- Admin APIs now enforce role guards:
+  - Competition create/update: `super_admin`
+  - Participant moderation + spin actions: `super_admin`, `moderator`
+  - Payout status updates: `super_admin`, `finance`
+- Admin pages for live-control/participants/payouts/new-competition are also role-gated.
 
 ## Recommended next steps
 

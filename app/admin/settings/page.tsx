@@ -1,6 +1,9 @@
 import { AdminShell } from "@/components/admin-shell";
+import { requireAdminPageRole } from "@/lib/server/admin-auth";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireAdminPageRole(["super_admin"]);
+
   return (
     <AdminShell
       title="Platform Settings"

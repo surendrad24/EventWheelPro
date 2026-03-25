@@ -7,7 +7,7 @@ type DbAdminUser = {
   id: string;
   email: string;
   password_hash: string;
-  role: string;
+  role: AdminRole;
 };
 
 type DbAdminSession = {
@@ -18,15 +18,21 @@ type DbAdminSession = {
   revoked_at: string | null;
 };
 
+export type AdminRole = "super_admin" | "moderator" | "finance";
+
 export type SessionAdmin = {
   id: string;
   email: string;
-  role: string;
+  role: AdminRole;
 };
 
 const DB_PATH = resolve(process.cwd(), "data/event-wheel.db");
 const DEFAULT_ADMIN_EMAIL = (process.env.DEMO_ADMIN_EMAIL ?? "admin@eventwheelpro.local").toLowerCase();
 const DEFAULT_ADMIN_PASSWORD = process.env.DEMO_ADMIN_PASSWORD ?? "admin123";
+const DEFAULT_MODERATOR_EMAIL = (process.env.DEMO_MODERATOR_EMAIL ?? "moderator@eventwheelpro.local").toLowerCase();
+const DEFAULT_MODERATOR_PASSWORD = process.env.DEMO_MODERATOR_PASSWORD ?? "moderator123";
+const DEFAULT_FINANCE_EMAIL = (process.env.DEMO_FINANCE_EMAIL ?? "finance@eventwheelpro.local").toLowerCase();
+const DEFAULT_FINANCE_PASSWORD = process.env.DEMO_FINANCE_PASSWORD ?? "finance123";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 function nowIso() {
@@ -97,17 +103,19 @@ const db = (() => {
   return instance;
 })();
 
-function seedDefaultAdmin() {
+function seedAdminUser(email: string, password: string, role: AdminRole) {
   const userId = id("admin");
-  const passwordHash = hashPassword(DEFAULT_ADMIN_PASSWORD);
+  const passwordHash = hashPassword(password);
   const now = nowIso();
   db.prepare(`
     INSERT OR IGNORE INTO admin_users (id, email, password_hash, role, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(userId, DEFAULT_ADMIN_EMAIL, passwordHash, "super_admin", now, now);
+  `).run(userId, email, passwordHash, role, now, now);
 }
 
-seedDefaultAdmin();
+seedAdminUser(DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, "super_admin");
+seedAdminUser(DEFAULT_MODERATOR_EMAIL, DEFAULT_MODERATOR_PASSWORD, "moderator");
+seedAdminUser(DEFAULT_FINANCE_EMAIL, DEFAULT_FINANCE_PASSWORD, "finance");
 
 export function authenticateAdmin(email: string, password: string): SessionAdmin | null {
   const user = db
@@ -181,7 +189,7 @@ export function getAdminBySessionToken(token: string): SessionAdmin | null {
     | (DbAdminSession & {
       admin_id: string;
       admin_email: string;
-      admin_role: string;
+      admin_role: AdminRole;
     })
     | undefined;
 

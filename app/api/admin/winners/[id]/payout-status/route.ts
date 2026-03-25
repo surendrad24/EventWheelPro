@@ -7,7 +7,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireAdminApiAuth(request);
+  const auth = requireAdminApiAuth(request, ["super_admin", "finance"]);
   if ("error" in auth) {
     return auth.error;
   }

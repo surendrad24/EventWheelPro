@@ -1,6 +1,9 @@
 import { AdminShell } from "@/components/admin-shell";
+import { requireAdminPageRole } from "@/lib/server/admin-auth";
 
-export default function TemplatesPage() {
+export default async function TemplatesPage() {
+  await requireAdminPageRole(["super_admin"]);
+
   return (
     <AdminShell
       title="Templates"

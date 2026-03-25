@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { StatusChip } from "@/components/status-chip";
 import { WheelPreview } from "@/components/wheel-preview";
 import { formatDateTime } from "@/lib/format";
+import { requireAdminPageRole } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 export default async function LiveControlPage({
@@ -10,6 +11,8 @@ export default async function LiveControlPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPageRole(["super_admin", "moderator"]);
+
   const { id } = await params;
   const maybeCompetition = store.getCompetitionById(id);
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
 import { StatusChip } from "@/components/status-chip";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { requireAdminPageRole } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
 
 export default async function PayoutsPage({
@@ -9,6 +10,8 @@ export default async function PayoutsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPageRole(["super_admin", "finance"]);
+
   const { id } = await params;
   const maybeCompetition = store.getCompetitionById(id);
 
