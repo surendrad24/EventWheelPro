@@ -4,9 +4,24 @@ export default function ProfilePage() {
   return (
     <MatrixPage>
       <section className="matrix-page-head matrix-profile-head">
-        <div className="eyebrow">Fusion Matrix - Profile Image Editor</div>
-        <h1 className="title-lg">Create your Matrix profile image</h1>
+        <div className="eyebrow">FUSION MATRIX PROFILE</div>
+        <div className="matrix-profile-title-rule" aria-hidden="true" />
+        <h1 className="title-lg">Create Your Matrix Profile Image</h1>
         <p>Build a branded avatar with the Matrix frame so your profile stands out across Telegram, X, and Binance communities.</p>
+        <div className="matrix-page-metrics">
+          <article>
+            <strong>1:1</strong>
+            <span>Square Output</span>
+          </article>
+          <article>
+            <strong>HD</strong>
+            <span>Profile Quality</span>
+          </article>
+          <article>
+            <strong>LIVE</strong>
+            <span>Instant Preview</span>
+          </article>
+        </div>
       </section>
 
       <section className="matrix-profile-editor-grid">
@@ -49,6 +64,12 @@ export default function ProfilePage() {
             </label>
           </div>
         </article>
+      </section>
+
+      <section className="matrix-profile-prompt-wrap">
+        <div className="matrix-profile-prompt">
+          Upload your portrait, tune the glow, and generate your Matrix-ready profile image.
+        </div>
       </section>
     </MatrixPage>
   );

@@ -6,6 +6,7 @@ export default function HeroesPage() {
     <MatrixPage>
       <section className="matrix-page-head matrix-heroes-head">
         <div className="eyebrow">FUSION MATRIX HEROES</div>
+        <div className="matrix-heroes-title-rule" aria-hidden="true" />
         <h1 className="title-lg">Meet The Defenders Of Assets</h1>
         <p>Elite crypto guardians protecting the network, one block at a time.</p>
         <div className="matrix-page-metrics">
@@ -35,10 +36,19 @@ export default function HeroesPage() {
               <h2>{hero.name}</h2>
               <div className="matrix-hero-role">{hero.role}</div>
               <p>{hero.summary}</p>
-              <a href="/tank" className="matrix-hero-card-link">View Token Mission</a>
+              <a href="/tank" className="matrix-hero-card-link">
+                <span>View Token Mission</span>
+                <i className="fas fa-arrow-right" />
+              </a>
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="matrix-heroes-prompt-wrap">
+        <div className="matrix-heroes-prompt">
+          Select a hero from above to view their details
+        </div>
       </section>
     </MatrixPage>
   );

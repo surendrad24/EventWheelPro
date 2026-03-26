@@ -40,7 +40,7 @@ export function MatrixHeader({
     id: string;
     slug: string;
     title: string;
-    themeKey: string;
+    themeKey?: string;
     status: string;
   }>;
 }) {
