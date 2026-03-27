@@ -79,6 +79,7 @@ export function MatrixQuizTemplate({
     <div className="matrix-quiz-shell">
       <section className="matrix-page-head matrix-heroes-head">
         <div className="eyebrow">{competition.title}</div>
+        <div className="matrix-heroes-title-rule" aria-hidden="true" />
         <h1 className="title-lg">Quiz Arena</h1>
         <p>{competition.announcementText || "Answer each round before time runs out."}</p>
       </section>

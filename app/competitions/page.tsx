@@ -1,5 +1,4 @@
 import { MatrixPage } from "@/components/matrix-site";
-import { MatrixQuizTemplate } from "@/components/matrix-quiz-template";
 import { MatrixWheelClient } from "@/components/matrix-wheel-client";
 import { store } from "@/lib/server/in-memory-store";
 
@@ -29,15 +28,10 @@ export default async function CompetitionIndexPage({
 
   const participants = store.getParticipants(competition.id);
   const winners = store.listWinners(competition.id);
-  const isQuizMode = competition.gameType === "quiz";
 
   return (
     <MatrixPage>
-      {isQuizMode ? (
-        <MatrixQuizTemplate competition={competition} participants={participants} winners={winners} />
-      ) : (
-        <MatrixWheelClient competition={competition} participants={participants} winners={winners} />
-      )}
+      <MatrixWheelClient competition={competition} participants={participants} winners={winners} />
     </MatrixPage>
   );
 }

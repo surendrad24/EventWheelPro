@@ -235,21 +235,6 @@ export function MatrixHomepage() {
           </div>
         </section>
 
-        <footer>
-          <div className="container">
-            <div className="row">
-              <div className="col-12">
-                <p>© 2026 <a href="https://fusionlancers.com/" target="_blank" rel="noreferrer">FUSIONLANCERS TECHNOLOGIES</a>.  All Rights Reserved. | Version 0.1.0</p>
-                <div className="social-icons d-flex justify-content-center mt-3">
-                  <a href="#" target="_blank" rel="noreferrer"><i className="fab fa-square-x-twitter" /></a>
-                  <a href="https://t.me/CryptoMatrixTeam" target="_blank" rel="noreferrer"><i className="fab fa-telegram" /></a>
-                  <a href="#" target="_blank" rel="noreferrer"><i className="fab fa-square-instagram" /></a>
-                  <a href="https://youtube.com/@binancematrixclan" target="_blank" rel="noreferrer"><i className="fab fa-youtube" /></a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </footer>
       </div>
 
       <Script id="matrix-site-base" strategy="afterInteractive">

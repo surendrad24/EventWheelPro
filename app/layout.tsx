@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
 import { GlobalMatrixHeader } from "@/components/global-matrix-header";
+import { MatrixFooter } from "@/components/matrix-site";
 import { store } from "@/lib/server/in-memory-store";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body>
         <GlobalMatrixHeader competitions={competitions} />
         {children}
+        <MatrixFooter />
       </body>
     </html>
   );

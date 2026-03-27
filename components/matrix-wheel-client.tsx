@@ -6,6 +6,34 @@ import type { Competition, Participant, Winner } from "@/lib/types";
 
 const wheelColors = ["#00ff33", "#18e615", "#8dff00", "#f1ff00", "#00f83a", "#72ff0b"];
 
+type QuizQuestion = {
+  id: string;
+  prompt: string;
+  options: string[];
+  answerIndex: number;
+};
+
+const SAMPLE_QUESTIONS: QuizQuestion[] = [
+  {
+    id: "q1",
+    prompt: "What does BSC stand for?",
+    options: ["Binance Smart Chain", "Bitcoin Secure Chain", "Blockchain Storage Core", "Basic Swap Contract"],
+    answerIndex: 0
+  },
+  {
+    id: "q2",
+    prompt: "A wallet private key should be:",
+    options: ["Shared with moderators", "Kept secret", "Stored in public bio", "Posted for verification"],
+    answerIndex: 1
+  },
+  {
+    id: "q3",
+    prompt: "Which status means registration is accepted?",
+    options: ["pending_review", "flagged_duplicate", "approved", "rejected"],
+    answerIndex: 2
+  }
+];
+
 type WheelParticipant = {
   id: string;
   username: string;
@@ -65,7 +93,12 @@ export function MatrixWheelClient({
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "A"));
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const isQuizGame = competitionState.gameType === "quiz";
   const isFlipGame = competitionState.gameType === "flip_to_win";
+  const currentQuestion = SAMPLE_QUESTIONS[roundIndex];
 
   useEffect(() => {
     const closeAt = new Date(competitionState.registrationCloseAt).getTime();
@@ -133,6 +166,18 @@ export function MatrixWheelClient({
     setFlipDigits(normalizeFlipDigits(winners[0].binanceId).split(""));
   }, [isFlipGame, winners]);
 
+  useEffect(() => {
+    setSelectedAnswer(null);
+    setSubmitted(false);
+  }, [roundIndex]);
+
+  const quizFeedback = useMemo(() => {
+    if (!submitted || selectedAnswer === null) {
+      return null;
+    }
+    return selectedAnswer === currentQuestion.answerIndex ? "Correct answer" : "Try next round";
+  }, [submitted, selectedAnswer, currentQuestion.answerIndex]);
+
   async function joinCompetition(formData: FormData) {
     setJoining(true);
     setJoinError(null);
@@ -168,9 +213,11 @@ export function MatrixWheelClient({
   return (
     <>
       <section className="matrix-page-head matrix-wheel-head">
-        <h1 className="title-lg">{competitionState.title.toUpperCase()} - REGISTER NOW FOR THE NEXT EVENT</h1>
-        <p className="matrix-wheel-subline">STARTING</p>
-        <p className="matrix-wheel-subline matrix-wheel-subline-accent">THE FIRST CHANCE WE GET</p>
+        <div className="eyebrow">{competitionState.title}</div>
+        <div className="matrix-heroes-title-rule" aria-hidden="true" />
+        <h1 className="title-lg">{isQuizGame ? "QUIZ ARENA" : "REGISTER NOW FOR THE NEXT EVENT"}</h1>
+        <p className="matrix-wheel-subline">{isQuizGame ? "LIVE QUIZ ROUND" : "STARTING"}</p>
+        <p className="matrix-wheel-subline matrix-wheel-subline-accent">{isQuizGame ? "ANSWER FAST TO WIN" : "THE FIRST CHANCE WE GET"}</p>
       </section>
 
       <section className="matrix-wheel-steps">
@@ -187,7 +234,6 @@ export function MatrixWheelClient({
           <h3>Enter Competition</h3>
           <p>Register with your Binance Nickname, ID and wallet.</p>
           <button className="matrix-wheel-step-btn" type="button" onClick={() => setShowJoin(true)}>Join Competition</button>
-          <div className="matrix-wheel-step-foot">VISIT MATRIXCLAN.COM/WHEEL TO JOIN</div>
         </article>
         <article className="matrix-wheel-step-card">
           <div className="matrix-wheel-step-number">3</div>
@@ -214,9 +260,49 @@ export function MatrixWheelClient({
           </div>
 
           <section className="matrix-wheel-panel matrix-wheel-panel-upgraded">
-            {!isFlipGame ? <div className="matrix-wheel-pointer" /> : null}
+            {!isFlipGame && !isQuizGame ? <div className="matrix-wheel-pointer" /> : null}
             <div className="matrix-wheel-stage">
-              {isFlipGame ? (
+              {isQuizGame ? (
+                <div className="matrix-quiz-inline">
+                  <article className="matrix-quiz-card">
+                    <div className="matrix-quiz-card-head">
+                      <h2>Question Round {roundIndex + 1}</h2>
+                    </div>
+                    <p className="matrix-quiz-prompt">{currentQuestion.prompt}</p>
+                    <div className="matrix-quiz-options">
+                      {currentQuestion.options.map((option, index) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`matrix-quiz-option ${selectedAnswer === index ? "active" : ""}`}
+                          onClick={() => !submitted && setSelectedAnswer(index)}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="matrix-wheel-actions matrix-wheel-actions-quiz">
+                      <button
+                        className="matrix-wheel-cta-primary"
+                        type="button"
+                        disabled={selectedAnswer === null || submitted}
+                        onClick={() => setSubmitted(true)}
+                      >
+                        Submit Answer
+                      </button>
+                      <button
+                        className="matrix-wheel-cta-secondary"
+                        type="button"
+                        disabled={roundIndex >= SAMPLE_QUESTIONS.length - 1}
+                        onClick={() => setRoundIndex((value) => Math.min(value + 1, SAMPLE_QUESTIONS.length - 1))}
+                      >
+                        Next Round
+                      </button>
+                    </div>
+                    {quizFeedback ? <p className="matrix-quiz-feedback">{quizFeedback}</p> : null}
+                  </article>
+                </div>
+              ) : isFlipGame ? (
                 <div className="matrix-flip-board">
                   {flipDigits.map((digit, index) => (
                     <div key={`${digit}-${index}`} className="matrix-flip-slot">

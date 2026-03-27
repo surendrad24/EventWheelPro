@@ -11,6 +11,7 @@
   --accent: #37d4a3;
   --accent-2: #6cc8ff;
   --matrix-green-bright: #00ff00;
+  --matrix-green-dark: #008f11;
   --warning: #ffb86b;
   --danger: #ff6f91;
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
@@ -1483,11 +1484,50 @@ textarea {
 }
 
 .matrix-footer {
-  padding: 24px 0 36px;
+  background-color: rgba(0, 0, 0, 0.9);
+  border-top: 1px solid var(--matrix-green-dark, #008f11);
+  padding: 30px 0;
   text-align: center;
   color: #6ce96c;
+  font-family: "Share Tech Mono", monospace;
   position: relative;
   z-index: 1;
+}
+
+.matrix-footer p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.matrix-footer .social-icons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.matrix-footer .social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 41px;
+  height: 41px;
+  color: #fff;
+  border-radius: 0;
+  transition: transform 0.2s ease, text-shadow 0.2s ease, color 0.2s ease;
+}
+
+.matrix-footer .social-icon i {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.matrix-footer .social-icon:hover {
+  color: #00ff66;
+  transform: scale(1.06);
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.68);
 }
 
 .matrix-footer a,
@@ -3699,6 +3739,21 @@ canvas#matrix-rain,
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
+.matrix-wheel-head {
+  margin-top: 28px;
+}
+
+.matrix-wheel-head .eyebrow {
+  color: #00ff63;
+  display: inline-block;
+  margin-bottom: 12px;
+  font-family: var(--matrix-header-font), "Courier New", monospace;
+  font-size: clamp(1.26rem, 2vw, 1.9rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(0, 255, 98, 0.34);
+}
+
 .matrix-wheel-subline {
   margin: 4px 0 0;
   color: #f4f4f6;
@@ -3718,6 +3773,8 @@ canvas#matrix-rain,
 
 .matrix-wheel-step-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   border: 2px solid rgba(255, 0, 204, 0.72);
   border-radius: 11px;
   background:
@@ -3760,13 +3817,20 @@ canvas#matrix-rain,
 }
 
 .matrix-wheel-step-btn {
+  margin-top: auto;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1;
   min-height: 34px;
   border: 0;
   border-radius: 999px;
   background: linear-gradient(180deg, #ffe300, #ff8c00);
   color: #2d1100;
   font-weight: 700;
-  padding: 0 14px;
+  padding: 8px 14px;
   font-size: 0.8rem;
   text-transform: capitalize;
 }
@@ -4341,6 +4405,18 @@ canvas#matrix-rain,
   padding: 40px 0 20px;
   display: flex;
   justify-content: center;
+}
+
+.matrix-quiz-inline {
+  width: min(760px, 100%);
+}
+
+.matrix-quiz-inline .matrix-quiz-card {
+  margin: 0;
+}
+
+.matrix-wheel-actions-quiz {
+  margin-top: 14px;
 }
 
 .matrix-flip-board {
