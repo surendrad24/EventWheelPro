@@ -146,6 +146,18 @@ textarea {
   gap: 12px;
 }
 
+.quick-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.quick-actions-row .btn,
+.quick-actions-row .btn-secondary,
+.quick-actions-row .btn-ghost {
+  flex: 1 1 220px;
+}
+
 .btn,
 .btn-secondary,
 .btn-ghost {
@@ -407,9 +419,16 @@ textarea {
   gap: 24px;
 }
 
+.admin-matrix.page.shell.sidebar-layout {
+  margin-top: 0;
+  padding-top: 96px;
+  padding-bottom: 24px;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 28px;
+}
+
 .admin-nav {
   position: sticky;
-  top: 20px;
   padding: 20px;
 }
 
@@ -1053,6 +1072,12 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .admin-matrix.page.shell.sidebar-layout {
+    margin-top: 0;
+    padding-top: 88px;
+    gap: 16px;
+  }
+
   .stats,
   .form-grid {
     grid-template-columns: 1fr;
@@ -1082,6 +1107,10 @@ textarea {
 }
 
 @media (max-width: 640px) {
+  .admin-matrix.page.shell.sidebar-layout {
+    padding-top: 78px;
+  }
+
   .page {
     padding-top: 18px;
   }
