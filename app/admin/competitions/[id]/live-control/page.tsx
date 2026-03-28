@@ -49,7 +49,7 @@ export default async function LiveControlPage({
         </div>
         <div className="live-console__nav">
           <div className="live-console__nav-brand">FUSION MATRIX</div>
-          <div className="live-console__nav-links">Tokens • Heroes • Comics • Profile • Competitions</div>
+          <div className="live-console__nav-links">Tokens • Heroes • Campaigns • Profile • Competitions</div>
           <div className="live-console__nav-icons">◉ ◆ ◉ ◉</div>
         </div>
         <div className="ticker">

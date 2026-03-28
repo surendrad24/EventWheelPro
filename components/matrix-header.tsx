@@ -87,9 +87,10 @@ export function MatrixHeader({
 
   const mobilePages = useMemo(
     () => [
-      { href: "/tank", label: "Tokens" },
+      { href: "/tokens", label: "Tokens" },
+      { href: "/tokens/sui", label: "SUI ($SUI)" },
       { href: "/heroes", label: "Heroes" },
-      { href: "/comics", label: "Comics" },
+      { href: "/campaigns", label: "Campaigns" },
       { href: "/profile", label: "Profile" }
     ],
     []
@@ -117,13 +118,21 @@ export function MatrixHeader({
           <div className="desktop-nav">
             <nav className="matrix-nav-center">
               <ul className="nav">
-                <li className="nav-item">
-                  <Link className="nav-link" href="/tank">
+                <li className="nav-item matrix-tokens-nav-item">
+                  <Link className="nav-link" href="/tokens">
                     Tokens <span className="nav-badge nav-badge-green">NEW</span>
                   </Link>
+                  <div className="matrix-tokens-dropdown">
+                    <Link className="matrix-token-option" href="/tokens/tank">
+                      TINKTANK ($TANK)
+                    </Link>
+                    <Link className="matrix-token-option" href="/tokens/sui">
+                      SUI ($SUI)
+                    </Link>
+                  </div>
                 </li>
                 <li className="nav-item"><Link className="nav-link" href="/heroes">Heroes</Link></li>
-                <li className="nav-item"><Link className="nav-link" href="/comics">Comics</Link></li>
+                <li className="nav-item"><Link className="nav-link" href="/campaigns">Campaigns</Link></li>
                 <li className="nav-item"><Link className="nav-link" href="/profile">Profile</Link></li>
                 <li className="nav-item matrix-competitions-nav-item">
                   <Link className="nav-link nav-link-btc-wheel" href="/competitions">Competitions</Link>

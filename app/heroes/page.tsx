@@ -36,7 +36,7 @@ export default function HeroesPage() {
               <h2>{hero.name}</h2>
               <div className="matrix-hero-role">{hero.role}</div>
               <p>{hero.summary}</p>
-              <a href="/tank" className="matrix-hero-card-link">
+              <a href="/tokens/tank" className="matrix-hero-card-link">
                 <span>View Token Mission</span>
                 <i className="fas fa-arrow-right" />
               </a>

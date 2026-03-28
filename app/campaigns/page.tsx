@@ -1,26 +1,26 @@
 import { MatrixPage } from "@/components/matrix-site";
 import { matrixComics, matrixHeroes } from "@/lib/matrix-data";
 
-export default function ComicsPage() {
+export default function CampaignsPage() {
   return (
     <MatrixPage>
       <section className="matrix-page-head matrix-comics-head">
-        <div className="eyebrow">FUSION MATRIX COMICS</div>
+        <div className="eyebrow">FUSION MATRIX CAMPAIGNS</div>
         <div className="matrix-comics-title-rule" aria-hidden="true" />
-        <h1 className="title-lg">Follow The Adventures Of Fusion Matrix</h1>
-        <p>Every volume expands the Matrix lore with new villains, alliances, and token-powered battles.</p>
+        <h1 className="title-lg">Follow Fusion Matrix Campaigns</h1>
+        <p>Each campaign introduces new missions, story arcs, rewards, and community-driven objectives.</p>
         <div className="matrix-page-metrics">
           <article>
             <strong>{matrixComics.length}</strong>
-            <span>Comic Volumes</span>
+            <span>Campaign Tracks</span>
           </article>
           <article>
             <strong>3</strong>
-            <span>Story Arcs</span>
+            <span>Active Campaign Arcs</span>
           </article>
           <article>
             <strong>LIVE</strong>
-            <span>Lore Updates</span>
+            <span>Campaign Updates</span>
           </article>
         </div>
       </section>
@@ -44,12 +44,12 @@ export default function ComicsPage() {
                     ))}
                   </div>
                   <a href="#" className="matrix-comic-cta">
-                    READ COMIC
+                    JOIN CAMPAIGN
                   </a>
                 </div>
               ) : (
                 <div className="matrix-comic-footer">
-                  <div className="matrix-comic-release">Released: Coming Soon</div>
+                  <div className="matrix-comic-release">Launch: Coming Soon</div>
                   <span className="matrix-comic-cta is-disabled">COMING SOON</span>
                 </div>
               )}
@@ -60,7 +60,7 @@ export default function ComicsPage() {
 
       <section className="matrix-comics-prompt-wrap">
         <div className="matrix-comics-prompt">
-          New chapters are announced first in the Fusion Matrix community channels.
+          New campaigns are announced first in the Fusion Matrix community channels.
         </div>
       </section>
     </MatrixPage>
