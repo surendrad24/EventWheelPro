@@ -49,6 +49,7 @@ export default async function LiveControlPage({
     <AdminShell title="Live Control" description="Spin management, fairness logging, and round-by-round winner operations.">
       <LiveControlFrame
         competitionId={competition.id}
+        gameType={competition.gameType}
         competitionOptions={competitions.map((entry) => ({ id: entry.id, title: entry.title }))}
       >
         <section className="live-console card card-pad stack">

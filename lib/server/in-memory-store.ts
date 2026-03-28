@@ -9,7 +9,20 @@ import {
   winners as seedWinners
 } from "@/lib/mock-data";
 import { computeRevealHash, deriveSpinIndex, randomHex, sha256Hex } from "@/lib/server/fairness";
-import type { Competition, CompetitionGameType, EventLog, Participant, Spin, SpinFairnessRecord, Winner } from "@/lib/types";
+import type {
+  Competition,
+  CompetitionGameType,
+  EventLog,
+  Participant,
+  QuizLiveState,
+  QuizLiveStatus,
+  QuizQuestion,
+  QuizQuestionType,
+  QuizSubmission,
+  Spin,
+  SpinFairnessRecord,
+  Winner
+} from "@/lib/types";
 
 type RegistrationPayload = {
   displayName: string;
@@ -173,6 +186,43 @@ type EventLogRow = {
   entity_id: string;
   created_at: string;
   payload_summary: string;
+};
+
+type QuizQuestionRow = {
+  id: string;
+  competition_id: string;
+  prompt: string;
+  question_type: QuizQuestionType;
+  options_json: string;
+  answer_index: number | null;
+  duration_seconds: number;
+  question_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type QuizLiveStateRow = {
+  competition_id: string;
+  status: QuizLiveStatus;
+  current_index: number;
+  question_started_at: string | null;
+  paused_remaining_seconds: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type QuizSubmissionRow = {
+  id: string;
+  competition_id: string;
+  question_id: string;
+  participant_id: string | null;
+  display_name: string | null;
+  exchange_id: string | null;
+  selected_index: number;
+  is_correct: number;
+  submitted_at: string;
+  created_at: string;
+  question_prompt?: string;
 };
 
 const DB_PATH = resolve(process.cwd(), "data/event-wheel.db");
@@ -356,6 +406,49 @@ function toEventLog(row: EventLogRow): EventLog {
   };
 }
 
+function toQuizQuestion(row: QuizQuestionRow): QuizQuestion {
+  const options = parseJson<string[]>(row.options_json, []).filter((entry) => typeof entry === "string");
+  return {
+    id: row.id,
+    competitionId: row.competition_id,
+    prompt: row.prompt,
+    questionType: row.question_type,
+    options,
+    answerIndex: row.answer_index ?? undefined,
+    durationSeconds: row.duration_seconds,
+    order: row.question_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function toQuizLiveState(row: QuizLiveStateRow): QuizLiveState {
+  return {
+    competitionId: row.competition_id,
+    status: row.status,
+    currentIndex: row.current_index,
+    questionStartedAt: row.question_started_at ?? undefined,
+    pausedRemainingSeconds: row.paused_remaining_seconds ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function toQuizSubmission(row: QuizSubmissionRow): QuizSubmission {
+  return {
+    id: row.id,
+    competitionId: row.competition_id,
+    questionId: row.question_id,
+    questionPrompt: row.question_prompt ?? "",
+    participantId: row.participant_id ?? undefined,
+    displayName: row.display_name ?? undefined,
+    exchangeId: row.exchange_id ?? undefined,
+    selectedIndex: row.selected_index,
+    isCorrect: row.is_correct === 1,
+    submittedAt: row.submitted_at
+  };
+}
+
 class SQLiteStore {
   private db: Database.Database;
 
@@ -496,6 +589,47 @@ class SQLiteStore {
         payload_summary TEXT NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS quiz_questions (
+        id TEXT PRIMARY KEY,
+        competition_id TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        question_type TEXT NOT NULL,
+        options_json TEXT NOT NULL,
+        answer_index INTEGER,
+        duration_seconds INTEGER NOT NULL,
+        question_order INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(competition_id) REFERENCES competitions(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS quiz_live_state (
+        competition_id TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        current_index INTEGER NOT NULL,
+        question_started_at TEXT,
+        paused_remaining_seconds INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(competition_id) REFERENCES competitions(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS quiz_submissions (
+        id TEXT PRIMARY KEY,
+        competition_id TEXT NOT NULL,
+        question_id TEXT NOT NULL,
+        participant_id TEXT,
+        display_name TEXT,
+        exchange_id TEXT,
+        selected_index INTEGER NOT NULL,
+        is_correct INTEGER NOT NULL,
+        submitted_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(competition_id) REFERENCES competitions(id),
+        FOREIGN KEY(question_id) REFERENCES quiz_questions(id),
+        FOREIGN KEY(participant_id) REFERENCES participants(id)
+      );
+
       CREATE INDEX IF NOT EXISTS idx_competitions_slug ON competitions(slug);
       CREATE INDEX IF NOT EXISTS idx_participants_competition ON participants(competition_id);
       CREATE INDEX IF NOT EXISTS idx_participants_wallet ON participants(competition_id, wallet_address);
@@ -505,6 +639,11 @@ class SQLiteStore {
       CREATE INDEX IF NOT EXISTS idx_spin_fairness_competition ON spin_fairness_records(competition_id);
       CREATE INDEX IF NOT EXISTS idx_spin_fairness_spin ON spin_fairness_records(spin_id);
       CREATE INDEX IF NOT EXISTS idx_event_logs_competition ON event_logs(competition_id);
+      CREATE INDEX IF NOT EXISTS idx_quiz_questions_competition ON quiz_questions(competition_id);
+      CREATE INDEX IF NOT EXISTS idx_quiz_questions_order ON quiz_questions(competition_id, question_order, created_at);
+      CREATE INDEX IF NOT EXISTS idx_quiz_live_state_status ON quiz_live_state(status);
+      CREATE INDEX IF NOT EXISTS idx_quiz_submissions_competition ON quiz_submissions(competition_id, submitted_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_quiz_submissions_question ON quiz_submissions(question_id, submitted_at DESC);
 
       CREATE TRIGGER IF NOT EXISTS trg_spin_fairness_no_update
       BEFORE UPDATE ON spin_fairness_records
@@ -595,6 +734,40 @@ class SQLiteStore {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
+    const insertQuizQuestion = this.db.prepare(`
+      INSERT INTO quiz_questions (
+        id, competition_id, prompt, question_type, options_json, answer_index,
+        duration_seconds, question_order, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const defaultQuizQuestions: Array<Omit<QuizQuestion, "id" | "competitionId" | "createdAt" | "updatedAt">> = [
+      {
+        prompt: "What does BSC stand for?",
+        questionType: "multiple_choice",
+        options: ["Binance Smart Chain", "Bitcoin Secure Chain", "Blockchain Storage Core", "Basic Swap Contract"],
+        answerIndex: 0,
+        durationSeconds: 20,
+        order: 1
+      },
+      {
+        prompt: "A wallet private key should be:",
+        questionType: "multiple_choice",
+        options: ["Shared with moderators", "Kept secret", "Stored in public bio", "Posted for verification"],
+        answerIndex: 1,
+        durationSeconds: 20,
+        order: 2
+      },
+      {
+        prompt: "Type your referral phrase in chat to continue to the next round.",
+        questionType: "question_only",
+        options: [],
+        answerIndex: undefined,
+        durationSeconds: 15,
+        order: 3
+      }
+    ];
+
     const tx = this.db.transaction(() => {
       for (const competition of seedCompetitions) {
         const ts = nowIso();
@@ -626,6 +799,24 @@ class SQLiteStore {
           ts,
           ts
         );
+
+        if (normalizeCompetitionGameType(competition.gameType, competition.themeKey) === "quiz") {
+          for (const question of defaultQuizQuestions) {
+            const quizTs = nowIso();
+            insertQuizQuestion.run(
+              id("quizq"),
+              competition.id,
+              question.prompt,
+              question.questionType,
+              JSON.stringify(question.options),
+              question.questionType === "multiple_choice" ? question.answerIndex ?? 0 : null,
+              question.durationSeconds,
+              question.order,
+              quizTs,
+              quizTs
+            );
+          }
+        }
       }
 
       for (const participant of seedParticipants) {
@@ -913,6 +1104,34 @@ class SQLiteStore {
       prizeTiers: structuredClone(source.prizeTiers)
     });
 
+    const sourceQuizQuestions = this.listQuizQuestions(source.id);
+    if (sourceQuizQuestions.length > 0) {
+      const insertQuizQuestion = this.db.prepare(`
+        INSERT INTO quiz_questions (
+          id, competition_id, prompt, question_type, options_json, answer_index,
+          duration_seconds, question_order, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const tx = this.db.transaction(() => {
+        for (const question of sourceQuizQuestions) {
+          const ts = nowIso();
+          insertQuizQuestion.run(
+            id("quizq"),
+            cloned.id,
+            question.prompt,
+            question.questionType,
+            JSON.stringify(question.options),
+            question.questionType === "multiple_choice" ? question.answerIndex ?? 0 : null,
+            question.durationSeconds,
+            question.order,
+            ts,
+            ts
+          );
+        }
+      });
+      tx();
+    }
+
     this.log(
       "competition.cloned",
       "competition",
@@ -1038,6 +1257,9 @@ class SQLiteStore {
     }
 
     const tx = this.db.transaction(() => {
+      this.db.prepare("DELETE FROM quiz_submissions WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM quiz_live_state WHERE competition_id = ?").run(competitionId);
+      this.db.prepare("DELETE FROM quiz_questions WHERE competition_id = ?").run(competitionId);
       this.db.prepare("DELETE FROM spin_fairness_records WHERE competition_id = ?").run(competitionId);
       this.db.prepare("DELETE FROM winners WHERE competition_id = ?").run(competitionId);
       this.db.prepare("DELETE FROM spins WHERE competition_id = ?").run(competitionId);
@@ -1321,6 +1543,474 @@ class SQLiteStore {
     }
 
     return this.registerForCompetition(competition, payload, "admin");
+  }
+
+  listQuizQuestions(competitionId: string, options?: { includeAnswers?: boolean }) {
+    const rows = this.db.prepare(`
+      SELECT * FROM quiz_questions
+      WHERE competition_id = ?
+      ORDER BY question_order ASC, created_at ASC
+    `).all(competitionId) as QuizQuestionRow[];
+    return rows.map((row) => {
+      const question = toQuizQuestion(row);
+      if (options?.includeAnswers === false) {
+        return {
+          ...question,
+          answerIndex: undefined
+        };
+      }
+      return question;
+    });
+  }
+
+  createQuizQuestion(
+    competitionId: string,
+    payload: {
+      prompt: string;
+      questionType: QuizQuestionType;
+      options?: string[];
+      answerIndex?: number;
+      durationSeconds?: number;
+      order?: number;
+    }
+  ) {
+    const competition = this.getCompetitionById(competitionId);
+    if (!competition) {
+      throw new Error("competition_not_found");
+    }
+
+    const prompt = payload.prompt.trim();
+    if (!prompt) {
+      throw new Error("prompt_required");
+    }
+
+    const questionType: QuizQuestionType = payload.questionType === "question_only" ? "question_only" : "multiple_choice";
+    const durationSeconds = Number.isFinite(payload.durationSeconds)
+      ? Math.max(5, Math.min(600, Math.floor(payload.durationSeconds as number)))
+      : 20;
+    const normalizedOptions = (payload.options ?? [])
+      .map((option) => option.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+
+    if (questionType === "multiple_choice" && normalizedOptions.length < 2) {
+      throw new Error("options_required");
+    }
+
+    const maxOrderRow = this.db.prepare(`
+      SELECT COALESCE(MAX(question_order), 0) AS max_order
+      FROM quiz_questions
+      WHERE competition_id = ?
+    `).get(competitionId) as { max_order: number };
+    const order = Number.isFinite(payload.order)
+      ? Math.max(1, Math.floor(payload.order as number))
+      : (maxOrderRow.max_order + 1);
+
+    const answerIndex = questionType === "multiple_choice"
+      ? Math.min(Math.max(0, Math.floor(payload.answerIndex ?? 0)), normalizedOptions.length - 1)
+      : null;
+
+    const createdId = id("quizq");
+    const ts = nowIso();
+    this.db.prepare(`
+      INSERT INTO quiz_questions (
+        id, competition_id, prompt, question_type, options_json, answer_index,
+        duration_seconds, question_order, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      createdId,
+      competitionId,
+      prompt,
+      questionType,
+      JSON.stringify(questionType === "multiple_choice" ? normalizedOptions : []),
+      answerIndex,
+      durationSeconds,
+      order,
+      ts,
+      ts
+    );
+
+    this.log("quiz_question.created", "quiz_question", createdId, `Created quiz question #${order}`, competitionId, "admin");
+    const row = this.db.prepare("SELECT * FROM quiz_questions WHERE id = ? LIMIT 1").get(createdId) as QuizQuestionRow;
+    return toQuizQuestion(row);
+  }
+
+  updateQuizQuestion(
+    questionId: string,
+    payload: {
+      prompt?: string;
+      questionType?: QuizQuestionType;
+      options?: string[];
+      answerIndex?: number;
+      durationSeconds?: number;
+      order?: number;
+    }
+  ) {
+    const existing = this.db.prepare("SELECT * FROM quiz_questions WHERE id = ? LIMIT 1").get(questionId) as QuizQuestionRow | undefined;
+    if (!existing) {
+      return null;
+    }
+
+    const nextPrompt = payload.prompt === undefined ? existing.prompt : payload.prompt.trim();
+    if (!nextPrompt) {
+      throw new Error("prompt_required");
+    }
+
+    const questionType: QuizQuestionType = payload.questionType === undefined
+      ? existing.question_type
+      : (payload.questionType === "question_only" ? "question_only" : "multiple_choice");
+
+    const nextDuration = payload.durationSeconds === undefined
+      ? existing.duration_seconds
+      : Math.max(5, Math.min(600, Math.floor(payload.durationSeconds)));
+    const nextOrder = payload.order === undefined ? existing.question_order : Math.max(1, Math.floor(payload.order));
+
+    const normalizedOptions = (payload.options === undefined
+      ? parseJson<string[]>(existing.options_json, [])
+      : payload.options
+    )
+      .map((option) => option.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+
+    if (questionType === "multiple_choice" && normalizedOptions.length < 2) {
+      throw new Error("options_required");
+    }
+
+    const nextAnswerIndex = questionType === "multiple_choice"
+      ? Math.min(
+        Math.max(0, Math.floor(payload.answerIndex === undefined ? (existing.answer_index ?? 0) : payload.answerIndex)),
+        normalizedOptions.length - 1
+      )
+      : null;
+
+    this.db.prepare(`
+      UPDATE quiz_questions
+      SET prompt = ?,
+          question_type = ?,
+          options_json = ?,
+          answer_index = ?,
+          duration_seconds = ?,
+          question_order = ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(
+      nextPrompt,
+      questionType,
+      JSON.stringify(questionType === "multiple_choice" ? normalizedOptions : []),
+      nextAnswerIndex,
+      nextDuration,
+      nextOrder,
+      nowIso(),
+      questionId
+    );
+
+    this.log(
+      "quiz_question.updated",
+      "quiz_question",
+      questionId,
+      `Updated quiz question #${nextOrder}`,
+      existing.competition_id,
+      "admin"
+    );
+
+    const row = this.db.prepare("SELECT * FROM quiz_questions WHERE id = ? LIMIT 1").get(questionId) as QuizQuestionRow;
+    return toQuizQuestion(row);
+  }
+
+  deleteQuizQuestion(questionId: string) {
+    const existing = this.db.prepare("SELECT * FROM quiz_questions WHERE id = ? LIMIT 1").get(questionId) as QuizQuestionRow | undefined;
+    if (!existing) {
+      return false;
+    }
+    this.db.prepare("DELETE FROM quiz_questions WHERE id = ?").run(questionId);
+    this.log("quiz_question.deleted", "quiz_question", questionId, `Deleted quiz question #${existing.question_order}`, existing.competition_id, "admin");
+    return true;
+  }
+
+  getQuizLiveState(competitionId: string) {
+    const row = this.db.prepare(`
+      SELECT * FROM quiz_live_state
+      WHERE competition_id = ?
+      LIMIT 1
+    `).get(competitionId) as QuizLiveStateRow | undefined;
+
+    return row ? toQuizLiveState(row) : null;
+  }
+
+  private getQuizDurations(competitionId: string) {
+    const questions = this.listQuizQuestions(competitionId);
+    return questions.map((question) => Math.max(5, Math.floor(question.durationSeconds || 20)));
+  }
+
+  private resolveQuizRuntime(competitionId: string, nowMs = Date.now()) {
+    const state = this.getQuizLiveState(competitionId);
+    const durations = this.getQuizDurations(competitionId);
+    const total = durations.length;
+    if (!total) {
+      return {
+        state,
+        total,
+        index: -1,
+        remaining: 0
+      };
+    }
+
+    const clampedIndex = Math.min(Math.max(0, state?.currentIndex ?? 0), total - 1);
+    if (!state || state.status === "stopped") {
+      return {
+        state,
+        total,
+        index: clampedIndex,
+        remaining: durations[clampedIndex] ?? 0
+      };
+    }
+
+    if (state.status === "paused") {
+      const baseDuration = durations[clampedIndex] ?? 20;
+      const remaining = Math.min(baseDuration, Math.max(0, Math.floor(state.pausedRemainingSeconds ?? baseDuration)));
+      return {
+        state,
+        total,
+        index: clampedIndex,
+        remaining
+      };
+    }
+
+    const startedAtMs = state.questionStartedAt ? new Date(state.questionStartedAt).getTime() : nowMs;
+    const elapsedSecondsRaw = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+    let elapsedSeconds = elapsedSecondsRaw;
+    let index = clampedIndex;
+    let duration = durations[index] ?? 20;
+
+    while (elapsedSeconds >= duration && index < total - 1) {
+      elapsedSeconds -= duration;
+      index += 1;
+      duration = durations[index] ?? 20;
+    }
+
+    const remaining = Math.max(0, duration - elapsedSeconds);
+    return {
+      state,
+      total,
+      index,
+      remaining
+    };
+  }
+
+  setQuizLiveAction(
+    competitionId: string,
+    action: "start" | "pause" | "resume" | "next" | "prev" | "reset"
+  ) {
+    const competition = this.getCompetitionById(competitionId);
+    if (!competition) {
+      throw new Error("competition_not_found");
+    }
+    const durations = this.getQuizDurations(competitionId);
+    if (!durations.length) {
+      throw new Error("quiz_questions_not_found");
+    }
+
+    const runtime = this.resolveQuizRuntime(competitionId);
+    const total = runtime.total;
+    const currentIndex = runtime.index >= 0 ? runtime.index : 0;
+    const now = nowIso();
+
+    let status: QuizLiveStatus = runtime.state?.status ?? "stopped";
+    let nextIndex = currentIndex;
+    let questionStartedAt: string | null = runtime.state?.questionStartedAt ?? null;
+    let pausedRemainingSeconds: number | null = runtime.remaining;
+
+    switch (action) {
+      case "start":
+        status = "running";
+        nextIndex = 0;
+        questionStartedAt = now;
+        pausedRemainingSeconds = null;
+        break;
+      case "pause":
+        status = "paused";
+        nextIndex = currentIndex;
+        questionStartedAt = null;
+        pausedRemainingSeconds = runtime.remaining;
+        break;
+      case "resume": {
+        const duration = durations[currentIndex] ?? 20;
+        const remaining = runtime.remaining > 0 ? runtime.remaining : duration;
+        const elapsed = Math.max(0, duration - remaining);
+        status = "running";
+        nextIndex = currentIndex;
+        questionStartedAt = new Date(Date.now() - (elapsed * 1000)).toISOString();
+        pausedRemainingSeconds = null;
+        break;
+      }
+      case "next":
+        status = runtime.state?.status ?? "paused";
+        nextIndex = Math.min(currentIndex + 1, total - 1);
+        questionStartedAt = status === "running" ? now : null;
+        pausedRemainingSeconds = status === "running" ? null : durations[nextIndex];
+        break;
+      case "prev":
+        status = runtime.state?.status ?? "paused";
+        nextIndex = Math.max(currentIndex - 1, 0);
+        questionStartedAt = status === "running" ? now : null;
+        pausedRemainingSeconds = status === "running" ? null : durations[nextIndex];
+        break;
+      case "reset":
+        status = "stopped";
+        nextIndex = 0;
+        questionStartedAt = null;
+        pausedRemainingSeconds = durations[0];
+        break;
+      default:
+        throw new Error("invalid_action");
+    }
+
+    this.db.prepare(`
+      INSERT INTO quiz_live_state (
+        competition_id, status, current_index, question_started_at, paused_remaining_seconds, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(competition_id) DO UPDATE SET
+        status = excluded.status,
+        current_index = excluded.current_index,
+        question_started_at = excluded.question_started_at,
+        paused_remaining_seconds = excluded.paused_remaining_seconds,
+        updated_at = excluded.updated_at
+    `).run(
+      competitionId,
+      status,
+      nextIndex,
+      questionStartedAt,
+      pausedRemainingSeconds,
+      runtime.state?.createdAt ?? now,
+      now
+    );
+
+    this.log(
+      `quiz_live.${action}`,
+      "quiz_live_state",
+      competitionId,
+      `Quiz live action: ${action} (index ${nextIndex + 1}/${total})`,
+      competitionId,
+      "admin"
+    );
+
+    return this.getQuizLiveState(competitionId);
+  }
+
+  submitQuizAnswer(
+    competitionId: string,
+    payload: {
+      questionId: string;
+      selectedIndex: number;
+      displayName?: string;
+      exchangeId?: string;
+    }
+  ) {
+    const competition = this.getCompetitionById(competitionId);
+    if (!competition) {
+      return { error: "competition_not_found" as const };
+    }
+
+    const questions = this.listQuizQuestions(competitionId);
+    if (!questions.length) {
+      return { error: "quiz_questions_not_found" as const };
+    }
+
+    const runtime = this.resolveQuizRuntime(competitionId);
+    const activeQuestion = runtime.index >= 0 ? questions[runtime.index] : null;
+    if (!activeQuestion) {
+      return { error: "quiz_question_not_active" as const };
+    }
+
+    const liveState = this.getQuizLiveState(competitionId);
+    if (!liveState || liveState.status !== "running") {
+      return { error: "quiz_not_running" as const };
+    }
+
+    if (runtime.remaining <= 0) {
+      return { error: "quiz_answer_window_closed" as const };
+    }
+
+    if (activeQuestion.id !== payload.questionId) {
+      return { error: "quiz_question_mismatch" as const };
+    }
+
+    if (activeQuestion.questionType !== "multiple_choice") {
+      return { error: "question_not_multiple_choice" as const };
+    }
+
+    const selectedIndex = Number.isFinite(payload.selectedIndex) ? Math.floor(payload.selectedIndex) : -1;
+    if (selectedIndex < 0 || selectedIndex >= activeQuestion.options.length) {
+      return { error: "invalid_selected_index" as const };
+    }
+
+    const normalizedExchangeId = payload.exchangeId?.trim() || null;
+    const normalizedDisplayName = payload.displayName?.trim() || null;
+    const participant = normalizedExchangeId
+      ? this.db.prepare(`
+          SELECT * FROM participants
+          WHERE competition_id = ? AND exchange_id = ?
+          LIMIT 1
+        `).get(competitionId, normalizedExchangeId) as ParticipantRow | undefined
+      : normalizedDisplayName
+        ? this.db.prepare(`
+            SELECT * FROM participants
+            WHERE competition_id = ? AND LOWER(display_name) = LOWER(?)
+            LIMIT 1
+          `).get(competitionId, normalizedDisplayName) as ParticipantRow | undefined
+        : undefined;
+
+    const isCorrect = selectedIndex === (activeQuestion.answerIndex ?? -1);
+    const submissionId = id("quizsub");
+    const submittedAt = nowIso();
+    this.db.prepare(`
+      INSERT INTO quiz_submissions (
+        id, competition_id, question_id, participant_id, display_name, exchange_id,
+        selected_index, is_correct, submitted_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      submissionId,
+      competitionId,
+      activeQuestion.id,
+      participant?.id ?? null,
+      normalizedDisplayName ?? participant?.display_name ?? null,
+      normalizedExchangeId ?? participant?.exchange_id ?? null,
+      selectedIndex,
+      isCorrect ? 1 : 0,
+      submittedAt,
+      submittedAt
+    );
+
+    this.log(
+      "quiz.answer.submitted",
+      "quiz_submission",
+      submissionId,
+      `Q${runtime.index + 1} answer submitted (${isCorrect ? "correct" : "wrong"})`,
+      competitionId,
+      "public"
+    );
+
+    return {
+      submissionId,
+      questionId: activeQuestion.id,
+      selectedIndex,
+      isCorrect,
+      submittedAt
+    };
+  }
+
+  listQuizSubmissions(competitionId: string) {
+    const rows = this.db.prepare(`
+      SELECT
+        s.*,
+        q.prompt AS question_prompt
+      FROM quiz_submissions s
+      INNER JOIN quiz_questions q ON q.id = s.question_id
+      WHERE s.competition_id = ?
+      ORDER BY s.submitted_at DESC
+    `).all(competitionId) as QuizSubmissionRow[];
+    return rows.map(toQuizSubmission);
   }
 
   listWinners(competitionId: string) {

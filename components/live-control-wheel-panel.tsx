@@ -7,7 +7,7 @@ import {
   type WheelOfFortunePrize,
   type WheelOfFortuneRef
 } from "@matmachry/react-wheel-of-fortune";
-import type { CompetitionGameType, Participant } from "@/lib/types";
+import type { CompetitionGameType, Participant, QuizLiveState, QuizQuestionType } from "@/lib/types";
 
 const WHEEL_THEME_COLORS: Record<"matrix-neon" | "matrix-cyber", Array<`#${string}`>> = {
   "matrix-neon": ["#18E3B0", "#00D47A", "#B7FF00", "#25D9D2", "#00C96B", "#D6FF3D"],
@@ -18,6 +18,30 @@ type WheelParticipant = {
   id: string;
   username: string;
   binanceId: string;
+};
+
+type PublicQuizQuestion = {
+  id: string;
+  competitionId: string;
+  prompt: string;
+  questionType: QuizQuestionType;
+  options: string[];
+  durationSeconds: number;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type PublicQuizPlayback = {
+  status: "empty" | "scheduled" | "live" | "completed";
+  activeIndex: number;
+  totalQuestions: number;
+  currentQuestion: PublicQuizQuestion | null;
+  timeRemainingSeconds: number;
+  nextQuestionAt?: string;
+  eventStartAt: string;
+  now: string;
+  controlMode: "auto" | "manual";
 };
 
 function toWheelParticipant(participant: Participant): WheelParticipant {
@@ -69,10 +93,14 @@ export function LiveControlWheelPanel({
   const [wheelTheme, setWheelTheme] = useState<"matrix-neon" | "matrix-cyber">("matrix-neon");
   const [isSpinning, setIsSpinning] = useState(false);
   const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "0"));
+  const [quizPlayback, setQuizPlayback] = useState<PublicQuizPlayback | null>(null);
+  const [quizLiveState, setQuizLiveState] = useState<QuizLiveState | null>(null);
+  const [quizControlLoading, setQuizControlLoading] = useState(false);
   const [spinError, setSpinError] = useState<string | null>(null);
   const [winner, setWinner] = useState<WheelParticipant | null>(null);
   const [showWinnerPopup, setShowWinnerPopup] = useState(false);
   const isFlipGame = gameType === "flip_to_win";
+  const isQuizGame = gameType === "quiz";
 
   useEffect(() => () => {
     if (flipTimerRef.current) {
@@ -126,6 +154,58 @@ export function LiveControlWheelPanel({
   }, [wheelParticipants.length]);
 
   const wheelSamplingClass = labelStep > 1 ? "matrix-wheel-lib--sampled" : "";
+
+  useEffect(() => {
+    if (!isQuizGame) {
+      return;
+    }
+    let active = true;
+    const loadQuizPlayback = async () => {
+      const response = await fetch(`/api/admin/competitions/${competitionId}/quiz-live`, { cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!active || !response.ok || !body.playback) {
+        return;
+      }
+      setQuizPlayback(body.playback as PublicQuizPlayback);
+      setQuizLiveState((body.liveState ?? null) as QuizLiveState | null);
+    };
+
+    void loadQuizPlayback();
+    const intervalId = window.setInterval(() => {
+      void loadQuizPlayback();
+    }, 1000);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [competitionId, isQuizGame]);
+
+  async function runQuizAction(action: "start" | "pause" | "resume" | "next" | "prev" | "reset") {
+    if (quizControlLoading) {
+      return;
+    }
+    setQuizControlLoading(true);
+    setSpinError(null);
+    try {
+      const response = await fetch(`/api/admin/competitions/${competitionId}/quiz-live`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error ?? "quiz_action_failed");
+      }
+      setQuizPlayback((body.playback ?? null) as PublicQuizPlayback | null);
+      setQuizLiveState((body.liveState ?? null) as QuizLiveState | null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "quiz_action_failed";
+      setSpinError(`Quiz control failed: ${message}`);
+    } finally {
+      setQuizControlLoading(false);
+    }
+  }
 
   function startFlipAnimation(resolvedWinner: WheelParticipant) {
     if (flipTimerRef.current) {
@@ -227,7 +307,59 @@ export function LiveControlWheelPanel({
       </div>
 
       <div className="matrix-wheel-stage">
-        {isFlipGame ? (
+        {isQuizGame ? (
+          <div className="matrix-quiz-inline">
+            <article className="matrix-quiz-card">
+              <div className="matrix-quiz-card-head">
+                <h2>
+                  {quizPlayback?.totalQuestions
+                    ? `Question ${Math.max(1, quizPlayback.activeIndex + 1)} / ${quizPlayback.totalQuestions}`
+                    : "Quiz Waiting Room"}
+                </h2>
+                <div className="matrix-quiz-timer">
+                  {String(Math.max(0, quizPlayback?.timeRemainingSeconds ?? 0)).padStart(2, "0")}s
+                </div>
+              </div>
+              <p className="matrix-quiz-prompt">
+                {quizPlayback?.currentQuestion?.prompt ?? "Quiz will start when the event begins."}
+              </p>
+              {quizPlayback?.currentQuestion?.questionType === "multiple_choice" ? (
+                <div className="matrix-quiz-options">
+                  {quizPlayback.currentQuestion.options.map((option, index) => (
+                    <div key={`${quizPlayback.currentQuestion?.id}-${index}`} className="matrix-quiz-option">
+                      {String.fromCharCode(65 + index)}. {option}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="matrix-quiz-feedback">Question-only mode: no options shown for this round.</p>
+              )}
+              <div className="matrix-wheel-actions matrix-wheel-actions-quiz">
+                <button className="matrix-wheel-cta-primary" type="button" onClick={() => runQuizAction("start")} disabled={quizControlLoading}>
+                  Start
+                </button>
+                <button className="matrix-wheel-cta-secondary" type="button" onClick={() => runQuizAction("pause")} disabled={quizControlLoading}>
+                  Pause
+                </button>
+                <button className="matrix-wheel-cta-secondary" type="button" onClick={() => runQuizAction("resume")} disabled={quizControlLoading}>
+                  Resume
+                </button>
+                <button className="matrix-wheel-cta-secondary" type="button" onClick={() => runQuizAction("prev")} disabled={quizControlLoading}>
+                  Prev
+                </button>
+                <button className="matrix-wheel-cta-secondary" type="button" onClick={() => runQuizAction("next")} disabled={quizControlLoading}>
+                  Next
+                </button>
+                <button className="matrix-wheel-cta-secondary" type="button" onClick={() => runQuizAction("reset")} disabled={quizControlLoading}>
+                  Reset
+                </button>
+              </div>
+              <p className="matrix-quiz-feedback">
+                Mode: {quizPlayback?.controlMode ?? "manual"} | State: {quizLiveState?.status ?? "stopped"}
+              </p>
+            </article>
+          </div>
+        ) : isFlipGame ? (
           <div className="live-console__flip-wrap">
             <div className="live-console__slot-machine">
               <div className="live-console__slot-face">

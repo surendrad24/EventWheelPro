@@ -36,6 +36,8 @@ export default async function CompetitionDetailPage({
         <div className="wrap">
           <Link className="btn" href={`/admin/competitions/${competition.id}/participants`}>Participants</Link>
           <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/live-control`}>Live control</Link>
+          <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/quiz-questions`}>Quiz Questions</Link>
+          <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/quiz-submissions`}>Quiz Submissions</Link>
           <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/winners`}>Winners</Link>
           <Link className="btn-secondary" href={`/admin/competitions/${competition.id}/payouts`}>Payouts</Link>
           {canAdminPerform(admin, "competitions", "add") && (

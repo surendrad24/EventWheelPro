@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { AdminCompetitionSwitcher } from "@/components/admin-competition-switcher";
+import type { CompetitionGameType } from "@/lib/types";
 
 type CompetitionOption = {
   id: string;
@@ -10,16 +11,21 @@ type CompetitionOption = {
 
 export function LiveControlFrame({
   competitionId,
+  gameType,
   competitionOptions,
   children
 }: {
   competitionId: string;
+  gameType: CompetitionGameType;
   competitionOptions: CompetitionOption[];
   children: ReactNode;
 }) {
   const fullscreenRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTabFocus, setIsTabFocus] = useState(false);
+  const [quizQuickStatus, setQuizQuickStatus] = useState<"stopped" | "running" | "paused">("stopped");
+  const [quizQuickLoading, setQuizQuickLoading] = useState(false);
+  const isQuizGame = gameType === "quiz";
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -53,6 +59,56 @@ export function LiveControlFrame({
     setIsTabFocus((prev) => !prev);
   }
 
+  useEffect(() => {
+    if (!isQuizGame) {
+      return;
+    }
+    let active = true;
+    const loadQuizStatus = async () => {
+      const response = await fetch(`/api/admin/competitions/${competitionId}/quiz-live`, { cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!active || !response.ok) {
+        return;
+      }
+      setQuizQuickStatus((body.liveState?.status ?? "stopped") as "stopped" | "running" | "paused");
+    };
+
+    void loadQuizStatus();
+    const intervalId = window.setInterval(() => {
+      void loadQuizStatus();
+    }, 2000);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [competitionId, isQuizGame]);
+
+  async function toggleQuizQuick() {
+    if (!isQuizGame || quizQuickLoading) {
+      return;
+    }
+    setQuizQuickLoading(true);
+    const action = quizQuickStatus === "running"
+      ? "pause"
+      : quizQuickStatus === "paused"
+        ? "resume"
+        : "start";
+    try {
+      const response = await fetch(`/api/admin/competitions/${competitionId}/quiz-live`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setQuizQuickStatus((body.liveState?.status ?? "stopped") as "stopped" | "running" | "paused");
+      }
+    } finally {
+      setQuizQuickLoading(false);
+    }
+  }
+
   return (
     <>
       <div className="live-console__below-nav">
@@ -66,6 +122,18 @@ export function LiveControlFrame({
               label="Competition"
             />
           </div>
+          {isQuizGame && (
+            <button
+              type="button"
+              className="live-console__tab-focus-btn"
+              onClick={toggleQuizQuick}
+              disabled={quizQuickLoading}
+              aria-label="Toggle quiz live"
+              title="Toggle quiz live"
+            >
+              {quizQuickStatus === "running" ? "PAUSE QUIZ" : quizQuickStatus === "paused" ? "RESUME QUIZ" : "GO LIVE QUIZ"}
+            </button>
+          )}
           <button
             type="button"
             className="live-console__tab-focus-btn"

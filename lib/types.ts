@@ -11,6 +11,15 @@ export type CompetitionGameType =
   | "flip_to_win"
   | "quiz";
 
+export type QuizQuestionType =
+  | "multiple_choice"
+  | "question_only";
+
+export type QuizLiveStatus =
+  | "stopped"
+  | "running"
+  | "paused";
+
 export type VerificationStatus =
   | "not_required"
   | "pending"
@@ -170,4 +179,40 @@ export interface EventLog {
   entityId: string;
   createdAt: string;
   payloadSummary: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  competitionId: string;
+  prompt: string;
+  questionType: QuizQuestionType;
+  options: string[];
+  answerIndex?: number;
+  durationSeconds: number;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuizLiveState {
+  competitionId: string;
+  status: QuizLiveStatus;
+  currentIndex: number;
+  questionStartedAt?: string;
+  pausedRemainingSeconds?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuizSubmission {
+  id: string;
+  competitionId: string;
+  questionId: string;
+  questionPrompt: string;
+  participantId?: string;
+  displayName?: string;
+  exchangeId?: string;
+  selectedIndex: number;
+  isCorrect: boolean;
+  submittedAt: string;
 }

@@ -7,40 +7,39 @@ import {
   type WheelOfFortunePrize,
   type WheelOfFortuneRef
 } from "@matmachry/react-wheel-of-fortune";
-import type { Competition, Participant, Winner } from "@/lib/types";
+import type { Competition, Participant, QuizQuestionType, Winner } from "@/lib/types";
 
 const WHEEL_THEME_COLORS: Record<"matrix-neon" | "matrix-cyber", Array<`#${string}`>> = {
   "matrix-neon": ["#18E3B0", "#00D47A", "#B7FF00", "#25D9D2", "#00C96B", "#D6FF3D"],
   "matrix-cyber": ["#00E5FF", "#00B8D4", "#7C4DFF", "#651FFF", "#00ACC1", "#536DFE"]
 };
 
-type QuizQuestion = {
+type PublicQuizQuestion = {
   id: string;
+  competitionId: string;
   prompt: string;
+  questionType: QuizQuestionType;
   options: string[];
-  answerIndex: number;
+  durationSeconds: number;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
-const SAMPLE_QUESTIONS: QuizQuestion[] = [
-  {
-    id: "q1",
-    prompt: "What does BSC stand for?",
-    options: ["Binance Smart Chain", "Bitcoin Secure Chain", "Blockchain Storage Core", "Basic Swap Contract"],
-    answerIndex: 0
-  },
-  {
-    id: "q2",
-    prompt: "A wallet private key should be:",
-    options: ["Shared with moderators", "Kept secret", "Stored in public bio", "Posted for verification"],
-    answerIndex: 1
-  },
-  {
-    id: "q3",
-    prompt: "Which status means registration is accepted?",
-    options: ["pending_review", "flagged_duplicate", "approved", "rejected"],
-    answerIndex: 2
-  }
-];
+type PublicQuizPlayback = {
+  status: "empty" | "scheduled" | "live" | "completed";
+  activeIndex: number;
+  totalQuestions: number;
+  currentQuestion: PublicQuizQuestion | null;
+  timeRemainingSeconds: number;
+  nextQuestionAt?: string;
+  eventStartAt: string;
+  now: string;
+  controlMode: "auto" | "manual";
+  liveState?: {
+    status: "stopped" | "running" | "paused";
+  };
+};
 
 type WheelParticipant = {
   id: string;
@@ -106,9 +105,12 @@ export function MatrixWheelClient({
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "0"));
-  const [roundIndex, setRoundIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [quizPlayback, setQuizPlayback] = useState<PublicQuizPlayback | null>(null);
+  const [quizSelectedAnswer, setQuizSelectedAnswer] = useState<number | null>(null);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+  const [quizSubmitMessage, setQuizSubmitMessage] = useState<string | null>(null);
+  const [quizDisplayName, setQuizDisplayName] = useState("");
+  const [quizExchangeId, setQuizExchangeId] = useState("");
   const [wheelTheme, setWheelTheme] = useState<"matrix-neon" | "matrix-cyber">("matrix-neon");
   const [isSpinning, setIsSpinning] = useState(false);
   const [showWinnerPopup, setShowWinnerPopup] = useState(false);
@@ -124,7 +126,6 @@ export function MatrixWheelClient({
   const showPublicWheelControls = false;
   const isQuizGame = competitionState.gameType === "quiz";
   const isFlipGame = competitionState.gameType === "flip_to_win";
-  const currentQuestion = SAMPLE_QUESTIONS[roundIndex];
 
   useEffect(() => {
     isSpinningRef.current = isSpinning;
@@ -225,16 +226,18 @@ export function MatrixWheelClient({
   }, [winnersRaw, participants]);
 
   async function refreshCompetitionData() {
-    const [participantsResponse, winnersResponse, competitionResponse, spinsResponse] = await Promise.all([
+    const [participantsResponse, winnersResponse, competitionResponse, spinsResponse, quizResponse] = await Promise.all([
       fetch(`/api/public/competitions/${competition.slug}/participants`, { cache: "no-store" }),
       fetch(`/api/public/competitions/${competition.slug}/winners`, { cache: "no-store" }),
       fetch(`/api/public/competitions/${competition.slug}`, { cache: "no-store" }),
-      fetch(`/api/public/competitions/${competition.slug}/spins?limit=1`, { cache: "no-store" })
+      fetch(`/api/public/competitions/${competition.slug}/spins?limit=1`, { cache: "no-store" }),
+      fetch(`/api/public/competitions/${competition.slug}/quiz`, { cache: "no-store" })
     ]);
     const participantsBody = await participantsResponse.json().catch(() => ({}));
     const winnersBody = await winnersResponse.json().catch(() => ({}));
     const competitionBody = await competitionResponse.json().catch(() => ({}));
     const spinsBody = await spinsResponse.json().catch(() => ({}));
+    const quizBody = await quizResponse.json().catch(() => ({}));
     const nextParticipants = ((participantsBody.participants ?? []) as Participant[]);
     if (participantsResponse.ok) {
       setParticipants(nextParticipants.map(toWheelParticipant));
@@ -244,6 +247,9 @@ export function MatrixWheelClient({
     }
     if (competitionResponse.ok && competitionBody.competition) {
       setCompetitionState(competitionBody.competition as Competition);
+    }
+    if (quizResponse.ok && quizBody.quiz) {
+      setQuizPlayback(quizBody.quiz as PublicQuizPlayback);
     }
 
     if (spinsResponse.ok) {
@@ -361,16 +367,59 @@ export function MatrixWheelClient({
   }, []);
 
   useEffect(() => {
-    setSelectedAnswer(null);
-    setSubmitted(false);
-  }, [roundIndex]);
+    setQuizSelectedAnswer(null);
+    setQuizSubmitMessage(null);
+  }, [quizPlayback?.currentQuestion?.id]);
 
-  const quizFeedback = useMemo(() => {
-    if (!submitted || selectedAnswer === null) {
-      return null;
+  const quizAnswerLocked = useMemo(() => {
+    if (!isQuizGame || !quizPlayback?.currentQuestion) {
+      return true;
     }
-    return selectedAnswer === currentQuestion.answerIndex ? "Correct answer" : "Try next round";
-  }, [submitted, selectedAnswer, currentQuestion.answerIndex]);
+    if (quizPlayback.currentQuestion.questionType !== "multiple_choice") {
+      return true;
+    }
+    if ((quizPlayback.timeRemainingSeconds ?? 0) <= 0) {
+      return true;
+    }
+    if (quizPlayback.controlMode === "manual") {
+      return quizPlayback.liveState?.status !== "running";
+    }
+    return quizPlayback.status !== "live";
+  }, [isQuizGame, quizPlayback]);
+
+  async function submitQuizAnswer() {
+    if (!quizPlayback?.currentQuestion || quizSelectedAnswer === null) {
+      return;
+    }
+    if (quizAnswerLocked) {
+      setQuizSubmitMessage("Answer window is closed.");
+      return;
+    }
+    setQuizSubmitting(true);
+    setQuizSubmitMessage(null);
+    try {
+      const response = await fetch(`/api/public/competitions/${competition.slug}/quiz/submit`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          questionId: quizPlayback.currentQuestion.id,
+          selectedIndex: quizSelectedAnswer,
+          displayName: quizDisplayName || undefined,
+          exchangeId: quizExchangeId || undefined
+        })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error ?? "submission_failed");
+      }
+      setQuizSubmitMessage(body.isCorrect ? "Submitted: Correct answer" : "Submitted: Answer recorded");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "submission_failed";
+      setQuizSubmitMessage(`Submit failed: ${message}`);
+    } finally {
+      setQuizSubmitting(false);
+    }
+  }
 
   async function joinCompetition(formData: FormData) {
     setJoining(true);
@@ -462,40 +511,59 @@ export function MatrixWheelClient({
                 <div className="matrix-quiz-inline">
                   <article className="matrix-quiz-card">
                     <div className="matrix-quiz-card-head">
-                      <h2>Question Round {roundIndex + 1}</h2>
+                      <h2>
+                        {quizPlayback?.totalQuestions
+                          ? `Question ${Math.max(1, quizPlayback.activeIndex + 1)} / ${quizPlayback.totalQuestions}`
+                          : "Quiz Waiting Room"}
+                      </h2>
+                      <div className="matrix-quiz-timer">
+                        {String(Math.max(0, quizPlayback?.timeRemainingSeconds ?? 0)).padStart(2, "0")}s
+                      </div>
                     </div>
-                    <p className="matrix-quiz-prompt">{currentQuestion.prompt}</p>
-                    <div className="matrix-quiz-options">
-                      {currentQuestion.options.map((option, index) => (
+                    <p className="matrix-quiz-prompt">
+                      {quizPlayback?.currentQuestion?.prompt ?? "Quiz will start when the admin starts the event."}
+                    </p>
+                    {quizPlayback?.currentQuestion?.questionType === "multiple_choice" ? (
+                      <div className="matrix-quiz-options">
+                        {quizPlayback.currentQuestion.options.map((option, index) => (
+                          <button
+                            key={`${quizPlayback.currentQuestion?.id}-${index}`}
+                            type="button"
+                            className={`matrix-quiz-option ${quizSelectedAnswer === index ? "active" : ""}`}
+                            onClick={() => setQuizSelectedAnswer(index)}
+                            disabled={quizAnswerLocked}
+                          >
+                            {String.fromCharCode(65 + index)}. {option}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="matrix-quiz-feedback">Question-only mode: focus on the host instructions.</p>
+                    )}
+                    {quizPlayback?.currentQuestion?.questionType === "multiple_choice" ? (
+                      <div className="matrix-quiz-actions">
+                        <input
+                          placeholder="Your Name"
+                          value={quizDisplayName}
+                          onChange={(event) => setQuizDisplayName(event.target.value)}
+                        />
+                        <input
+                          placeholder="Binance ID"
+                          value={quizExchangeId}
+                          onChange={(event) => setQuizExchangeId(event.target.value)}
+                        />
                         <button
-                          key={option}
+                          className="matrix-wheel-cta-primary"
                           type="button"
-                          className={`matrix-quiz-option ${selectedAnswer === index ? "active" : ""}`}
-                          onClick={() => !submitted && setSelectedAnswer(index)}
+                          onClick={submitQuizAnswer}
+                          disabled={quizSubmitting || quizSelectedAnswer === null || quizAnswerLocked}
                         >
-                          {option}
+                          {quizSubmitting ? "Submitting..." : "Submit Answer"}
                         </button>
-                      ))}
-                    </div>
-                    <div className="matrix-wheel-actions matrix-wheel-actions-quiz">
-                      <button
-                        className="matrix-wheel-cta-primary"
-                        type="button"
-                        disabled={selectedAnswer === null || submitted}
-                        onClick={() => setSubmitted(true)}
-                      >
-                        Submit Answer
-                      </button>
-                      <button
-                        className="matrix-wheel-cta-secondary"
-                        type="button"
-                        disabled={roundIndex >= SAMPLE_QUESTIONS.length - 1}
-                        onClick={() => setRoundIndex((value) => Math.min(value + 1, SAMPLE_QUESTIONS.length - 1))}
-                      >
-                        Next Round
-                      </button>
-                    </div>
-                    {quizFeedback ? <p className="matrix-quiz-feedback">{quizFeedback}</p> : null}
+                      </div>
+                    ) : null}
+                    {quizAnswerLocked ? <p className="matrix-quiz-feedback">Answers locked for this question.</p> : null}
+                    {quizSubmitMessage ? <p className="matrix-quiz-feedback">{quizSubmitMessage}</p> : null}
                   </article>
                 </div>
               ) : isFlipGame ? (
