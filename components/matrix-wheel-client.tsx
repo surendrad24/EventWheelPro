@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  WheelOfFortune,
+  type WheelOfFortunePrize,
+  type WheelOfFortuneRef
+} from "@matmachry/react-wheel-of-fortune";
 import type { Competition, Participant, Winner } from "@/lib/types";
 
-const wheelColors = ["#00ff33", "#18e615", "#8dff00", "#f1ff00", "#00f83a", "#72ff0b"];
+const WHEEL_THEME_COLORS: Record<"matrix-neon" | "matrix-cyber", Array<`#${string}`>> = {
+  "matrix-neon": ["#18E3B0", "#00D47A", "#B7FF00", "#25D9D2", "#00C96B", "#D6FF3D"],
+  "matrix-cyber": ["#00E5FF", "#00B8D4", "#7C4DFF", "#651FFF", "#00ACC1", "#536DFE"]
+};
 
 type QuizQuestion = {
   id: string;
@@ -62,8 +70,12 @@ function winnerToParticipant(winner: Winner): WheelParticipant {
   };
 }
 
-function wheelNameLabel(name: string) {
-  return name.length > 11 ? `${name.slice(0, 11)}..` : name;
+function wheelNameLabelForDensity(name: string, total: number, step: number) {
+  const visibleLabels = Math.max(1, Math.ceil(total / Math.max(1, step)));
+  const labelRadius = 142;
+  const arcLength = (2 * Math.PI * labelRadius) / visibleLabels;
+  const maxChars = Math.max(3, Math.min(14, Math.floor((arcLength - 6) / 7)));
+  return name.length > maxChars ? `${name.slice(0, maxChars)}..` : name;
 }
 
 function normalizeFlipDigits(input: string) {
@@ -89,13 +101,17 @@ export function MatrixWheelClient({
   const [showJoin, setShowJoin] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [rotation, setRotation] = useState(0);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
   const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "A"));
   const [roundIndex, setRoundIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [wheelTheme, setWheelTheme] = useState<"matrix-neon" | "matrix-cyber">("matrix-neon");
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [showWinnerPopup, setShowWinnerPopup] = useState(false);
+  const [spinWinner, setSpinWinner] = useState<WheelParticipant | null>(null);
+  const wheelRef = useRef<WheelOfFortuneRef>(null);
   const isQuizGame = competitionState.gameType === "quiz";
   const isFlipGame = competitionState.gameType === "flip_to_win";
   const currentQuestion = SAMPLE_QUESTIONS[roundIndex];
@@ -116,17 +132,53 @@ export function MatrixWheelClient({
     return `${hours}:${minutes}:${seconds}`;
   }, [timeLeft]);
 
-  const wheelEntries = useMemo(() => participants.map((entry) => entry.username), [participants]);
+  const labelStep = useMemo(() => {
+    const count = participants.length;
+    const maxVisibleLabels = count >= 1000 ? 140 : count >= 500 ? 120 : 90;
+    if (count > maxVisibleLabels) return Math.ceil(count / maxVisibleLabels);
+    return 1;
+  }, [participants.length]);
 
-  const wheelGradient = useMemo(() => {
-    if (!wheelEntries.length) {
-      return "";
-    }
-    const segment = 360 / wheelEntries.length;
-    return wheelEntries
-      .map((_, index) => `${wheelColors[index % wheelColors.length]} ${segment * index}deg ${segment * (index + 1)}deg`)
-      .join(", ");
-  }, [wheelEntries]);
+  const wheelPrizes = useMemo<WheelOfFortunePrize[]>(
+    () => {
+      const count = participants.length;
+      const segmentDegrees = count ? 360 / count : 0;
+
+      return participants.map((entry, index) => {
+        const showLabel = labelStep === 1 || index % labelStep === 0;
+
+        return {
+          key: entry.id,
+          color: WHEEL_THEME_COLORS[wheelTheme][index % WHEEL_THEME_COLORS[wheelTheme].length],
+          displayOrientation: "vertical",
+          prize: showLabel ? (
+            <span className="matrix-wheel-radial-label" style={{ transform: "rotate(-90deg)" }}>
+              {wheelNameLabelForDensity(entry.username, count, labelStep)}
+            </span>
+          ) : "\u200B"
+        };
+      });
+    },
+    [participants, labelStep, wheelTheme]
+  );
+
+  const wheelDensityClass = useMemo(() => {
+    const count = participants.length;
+    if (count >= 1000) return "matrix-wheel-lib--1000";
+    if (count >= 800) return "matrix-wheel-lib--800";
+    if (count >= 600) return "matrix-wheel-lib--600";
+    if (count >= 500) return "matrix-wheel-lib--500";
+    if (count >= 300) return "matrix-wheel-lib--300";
+    if (count >= 150) return "matrix-wheel-lib--150";
+    if (count >= 100) return "matrix-wheel-lib--100";
+    if (count >= 70) return "matrix-wheel-lib--70";
+    if (count >= 50) return "matrix-wheel-lib--50";
+    if (count >= 30) return "matrix-wheel-lib--30";
+    if (count >= 18) return "matrix-wheel-lib--18";
+    return "matrix-wheel-lib--base";
+  }, [participants.length]);
+
+  const wheelSamplingClass = labelStep > 1 ? "matrix-wheel-lib--sampled" : "";
 
   async function refreshCompetitionData() {
     const [participantsResponse, winnersResponse, competitionResponse] = await Promise.all([
@@ -260,7 +312,6 @@ export function MatrixWheelClient({
           </div>
 
           <section className="matrix-wheel-panel matrix-wheel-panel-upgraded">
-            {!isFlipGame && !isQuizGame ? <div className="matrix-wheel-pointer" /> : null}
             <div className="matrix-wheel-stage">
               {isQuizGame ? (
                 <div className="matrix-quiz-inline">
@@ -311,29 +362,63 @@ export function MatrixWheelClient({
                   ))}
                 </div>
               ) : (
-                <div
-                  className="matrix-wheel-disc"
-                  style={{
-                    transform: `rotate(${rotation}deg)`,
-                    background: wheelEntries.length ? `conic-gradient(from -90deg, ${wheelGradient})` : "#000"
-                  }}
-                >
-                  {wheelEntries.length ? (
-                    <div className="matrix-wheel-labels">
-                      {wheelEntries.map((name, index) => (
-                        <span
-                          key={`${name}-${index}`}
-                          className="matrix-wheel-label-chip"
-                          style={{ transform: `rotate(${(360 / wheelEntries.length) * index}deg) translate(0, -164px) rotate(90deg)` }}
-                        >
-                          {wheelNameLabel(name)}
-                        </span>
-                      ))}
+                wheelPrizes.length ? (
+                  <div className={`matrix-wheel-lib-wrap ${wheelTheme}`} style={{ ["--wheel-segments" as string]: wheelPrizes.length }}>
+                    <div className="matrix-wheel-theme-toggle" role="group" aria-label="Wheel theme">
+                      <button
+                        type="button"
+                        className={wheelTheme === "matrix-neon" ? "active" : ""}
+                        onClick={() => setWheelTheme("matrix-neon")}
+                      >
+                        Matrix Neon
+                      </button>
+                      <button
+                        type="button"
+                        className={wheelTheme === "matrix-cyber" ? "active" : ""}
+                        onClick={() => setWheelTheme("matrix-cyber")}
+                      >
+                        Matrix Cyber
+                      </button>
                     </div>
-                  ) : (
-                    <div className="matrix-empty-wheel">No Participants</div>
-                  )}
-                </div>
+                    <WheelOfFortune
+                      ref={wheelRef}
+                      className={`matrix-wheel-lib ${wheelDensityClass} ${wheelSamplingClass}`.trim()}
+                      prizes={wheelPrizes}
+                      wheelPointer={<div className="matrix-wheel-lib-pointer" />}
+                      wheelSpinButton={
+                        <button
+                          type="button"
+                          className="matrix-wheel-lib-spin"
+                          disabled={isSpinning}
+                          onClick={() => {
+                            if (isSpinning) return;
+                            wheelRef.current?.spin();
+                          }}
+                        >
+                          SPIN
+                        </button>
+                      }
+                      onSpinStart={() => {
+                        setIsSpinning(true);
+                        setShowWinnerPopup(false);
+                        setSpinWinner(null);
+                      }}
+                      onSpinEnd={(prize) => {
+                        setIsSpinning(false);
+                        const resolved = participants.find((entry) => entry.id === prize.key) ?? null;
+                        if (resolved) {
+                          setSpinWinner(resolved);
+                          setShowWinnerPopup(true);
+                        }
+                      }}
+                      animationDurationInMs={4500}
+                      wheelRotationsCount={6}
+                      wheelBorderColor="#00FF66"
+                    />
+                  </div>
+                ) : (
+                  <div className="matrix-empty-wheel">No Participants</div>
+                )
               )}
             </div>
             <div className="matrix-wheel-actions">
@@ -440,6 +525,34 @@ export function MatrixWheelClient({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showWinnerPopup && spinWinner ? (
+        <div className="matrix-winner-backdrop" onClick={() => setShowWinnerPopup(false)}>
+          <div className={`matrix-winner-popup ${wheelTheme}`} onClick={(event) => event.stopPropagation()}>
+            <div className="matrix-winner-energy" aria-hidden="true">
+              {Array.from({ length: 16 }).map((_, index) => (
+                <span
+                  key={index}
+                  className="matrix-winner-spark"
+                  style={{
+                    transform: `translate(-50%, -50%) rotate(${index * 22.5}deg) translateY(-106px)`,
+                    animationDelay: `${index * 70}ms`
+                  }}
+                />
+              ))}
+            </div>
+            <button className="matrix-modal-close" onClick={() => setShowWinnerPopup(false)}>×</button>
+            <p className="matrix-winner-kicker">Winner Selected</p>
+            <h2 className="matrix-winner-name">{spinWinner.username}</h2>
+            <p className="matrix-winner-id">
+              Exchange ID: <strong>{spinWinner.binanceId}</strong>
+            </p>
+            <button className="matrix-submit-btn" type="button" onClick={() => setShowWinnerPopup(false)}>
+              Awesome
+            </button>
           </div>
         </div>
       ) : null}
