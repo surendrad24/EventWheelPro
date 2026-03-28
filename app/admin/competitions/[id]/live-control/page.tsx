@@ -70,6 +70,7 @@ export default async function LiveControlPage({
             <article className="live-console__wheel-panel matrix-wheel-panel matrix-wheel-panel-upgraded">
               <LiveControlWheelPanel
                 competitionId={competition.id}
+                gameType={competition.gameType}
                 participants={eventParticipants}
                 timeLeft={timeLeft}
                 totalWinners={store.listWinners(id).length}

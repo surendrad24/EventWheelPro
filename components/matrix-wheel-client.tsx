@@ -50,6 +50,14 @@ type WheelParticipant = {
   country: string;
 };
 
+type LeaderboardEntry = {
+  key: string;
+  username: string;
+  binanceId: string;
+  wins: number;
+  latestWonAt: string;
+};
+
 function toWheelParticipant(participant: Participant): WheelParticipant {
   return {
     id: participant.id,
@@ -57,16 +65,6 @@ function toWheelParticipant(participant: Participant): WheelParticipant {
     binanceId: participant.exchangeId ?? "N/A",
     wallet: participant.walletAddress ?? "N/A",
     country: participant.country
-  };
-}
-
-function winnerToParticipant(winner: Winner): WheelParticipant {
-  return {
-    id: winner.id,
-    username: winner.displayName,
-    binanceId: "N/A",
-    wallet: winner.transactionReference ?? "On record",
-    country: "-"
   };
 }
 
@@ -86,6 +84,10 @@ function normalizeFlipDigits(input: string) {
   return digitsOnly.padEnd(10, "0");
 }
 
+function randomDigit() {
+  return String(Math.floor(Math.random() * 10));
+}
+
 export function MatrixWheelClient({
   competition,
   participants: initialParticipants,
@@ -96,14 +98,14 @@ export function MatrixWheelClient({
   winners: Winner[];
 }) {
   const [participants, setParticipants] = useState<WheelParticipant[]>(initialParticipants.map(toWheelParticipant));
-  const [winners, setWinners] = useState<WheelParticipant[]>(initialWinners.map(winnerToParticipant));
+  const [winnersRaw, setWinnersRaw] = useState<Winner[]>(initialWinners);
   const [competitionState, setCompetitionState] = useState<Competition>(competition);
   const [showJoin, setShowJoin] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "A"));
+  const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "0"));
   const [roundIndex, setRoundIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -112,9 +114,21 @@ export function MatrixWheelClient({
   const [showWinnerPopup, setShowWinnerPopup] = useState(false);
   const [spinWinner, setSpinWinner] = useState<WheelParticipant | null>(null);
   const wheelRef = useRef<WheelOfFortuneRef>(null);
+  const isSpinningRef = useRef(false);
+  const lastSyncedSpinIdRef = useRef<string | null>(null);
+  const pendingBackendWinnerRef = useRef<WheelParticipant | null>(null);
+  const queuedBackendWinnerRef = useRef<WheelParticipant | null>(null);
+  const flipTimerRef = useRef<number | null>(null);
+  const flipAnimatingRef = useRef(false);
+  const queuedFlipWinnerRef = useRef<WheelParticipant | null>(null);
+  const showPublicWheelControls = false;
   const isQuizGame = competitionState.gameType === "quiz";
   const isFlipGame = competitionState.gameType === "flip_to_win";
   const currentQuestion = SAMPLE_QUESTIONS[roundIndex];
+
+  useEffect(() => {
+    isSpinningRef.current = isSpinning;
+  }, [isSpinning]);
 
   useEffect(() => {
     const closeAt = new Date(competitionState.registrationCloseAt).getTime();
@@ -180,43 +194,171 @@ export function MatrixWheelClient({
 
   const wheelSamplingClass = labelStep > 1 ? "matrix-wheel-lib--sampled" : "";
 
+  const leaderboardEntries = useMemo<LeaderboardEntry[]>(() => {
+    const participantById = new Map(participants.map((entry) => [entry.id, entry]));
+    const table = new Map<string, LeaderboardEntry>();
+
+    for (const winner of winnersRaw) {
+      const key = winner.participantId || winner.displayName;
+      const binanceId = participantById.get(winner.participantId)?.binanceId ?? "N/A";
+      const existing = table.get(key);
+      if (existing) {
+        existing.wins += 1;
+        if (winner.wonAt > existing.latestWonAt) {
+          existing.latestWonAt = winner.wonAt;
+        }
+      } else {
+        table.set(key, {
+          key,
+          username: winner.displayName,
+          binanceId,
+          wins: 1,
+          latestWonAt: winner.wonAt
+        });
+      }
+    }
+
+    return Array.from(table.values()).sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return b.latestWonAt.localeCompare(a.latestWonAt);
+    });
+  }, [winnersRaw, participants]);
+
   async function refreshCompetitionData() {
-    const [participantsResponse, winnersResponse, competitionResponse] = await Promise.all([
+    const [participantsResponse, winnersResponse, competitionResponse, spinsResponse] = await Promise.all([
       fetch(`/api/public/competitions/${competition.slug}/participants`, { cache: "no-store" }),
       fetch(`/api/public/competitions/${competition.slug}/winners`, { cache: "no-store" }),
-      fetch(`/api/public/competitions/${competition.slug}`, { cache: "no-store" })
+      fetch(`/api/public/competitions/${competition.slug}`, { cache: "no-store" }),
+      fetch(`/api/public/competitions/${competition.slug}/spins?limit=1`, { cache: "no-store" })
     ]);
     const participantsBody = await participantsResponse.json().catch(() => ({}));
     const winnersBody = await winnersResponse.json().catch(() => ({}));
     const competitionBody = await competitionResponse.json().catch(() => ({}));
+    const spinsBody = await spinsResponse.json().catch(() => ({}));
+    const nextParticipants = ((participantsBody.participants ?? []) as Participant[]);
     if (participantsResponse.ok) {
-      setParticipants(((participantsBody.participants ?? []) as Participant[]).map(toWheelParticipant));
+      setParticipants(nextParticipants.map(toWheelParticipant));
     }
     if (winnersResponse.ok) {
-      setWinners(((winnersBody.winners ?? []) as Winner[]).map(winnerToParticipant));
+      setWinnersRaw((winnersBody.winners ?? []) as Winner[]);
     }
     if (competitionResponse.ok && competitionBody.competition) {
       setCompetitionState(competitionBody.competition as Competition);
     }
+
+    if (spinsResponse.ok) {
+      const latestSpin = Array.isArray(spinsBody.spins) ? spinsBody.spins[0] : undefined;
+      if (latestSpin?.id) {
+        if (!lastSyncedSpinIdRef.current) {
+          lastSyncedSpinIdRef.current = latestSpin.id;
+        } else if (lastSyncedSpinIdRef.current !== latestSpin.id) {
+          lastSyncedSpinIdRef.current = latestSpin.id;
+          const winnerParticipant = nextParticipants.find((entry) => entry.id === latestSpin.resultParticipantId);
+          const winnerFromSpin: WheelParticipant = winnerParticipant
+            ? toWheelParticipant(winnerParticipant)
+            : {
+              id: latestSpin.resultParticipantId,
+              username: latestSpin.resultDisplayName ?? "Winner",
+              binanceId: "N/A",
+              wallet: "N/A",
+              country: "N/A"
+            };
+
+          if (isFlipGame) {
+            if (flipAnimatingRef.current) {
+              queuedFlipWinnerRef.current = winnerFromSpin;
+            } else {
+              startFlipAnimation(winnerFromSpin);
+            }
+          } else {
+            if (isSpinningRef.current) {
+              queuedBackendWinnerRef.current = winnerFromSpin;
+            } else {
+              pendingBackendWinnerRef.current = winnerFromSpin;
+              wheelRef.current?.spin();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function startFlipAnimation(winner: WheelParticipant) {
+    if (flipTimerRef.current) {
+      window.clearInterval(flipTimerRef.current);
+      flipTimerRef.current = null;
+    }
+
+    flipAnimatingRef.current = true;
+    setIsSpinning(true);
+    setShowWinnerPopup(false);
+    setSpinWinner(null);
+
+    const finalDigits = normalizeFlipDigits(winner.binanceId).split("");
+    let tick = 0;
+    const baseTicks = 22;
+    const staggerTicks = finalDigits.length * 2;
+    const endTick = baseTicks + staggerTicks;
+
+    flipTimerRef.current = window.setInterval(() => {
+      tick += 1;
+      setFlipDigits((prev) => prev.map((_, index) => {
+        const lockAt = baseTicks + index * 2;
+        if (tick >= lockAt) {
+          return finalDigits[index] ?? "0";
+        }
+        return randomDigit();
+      }));
+
+      if (tick >= endTick) {
+        if (flipTimerRef.current) {
+          window.clearInterval(flipTimerRef.current);
+          flipTimerRef.current = null;
+        }
+        setFlipDigits(finalDigits);
+        flipAnimatingRef.current = false;
+        setIsSpinning(false);
+        setSpinWinner(winner);
+        setShowWinnerPopup(true);
+
+        if (queuedFlipWinnerRef.current) {
+          const queuedWinner = queuedFlipWinnerRef.current;
+          queuedFlipWinnerRef.current = null;
+          window.setTimeout(() => {
+            startFlipAnimation(queuedWinner);
+          }, 240);
+        }
+      }
+    }, 75);
   }
 
   useEffect(() => {
+    refreshCompetitionData().catch(() => undefined);
     const syncInterval = window.setInterval(() => {
       refreshCompetitionData().catch(() => undefined);
-    }, 12000);
+    }, 3000);
     return () => window.clearInterval(syncInterval);
   }, [competition.slug]);
 
   useEffect(() => {
-    if (!isFlipGame) {
+    if (!isFlipGame || flipAnimatingRef.current) {
       return;
     }
-    if (!winners.length) {
-      setFlipDigits(Array.from({ length: 10 }, () => "A"));
+    if (!winnersRaw.length) {
+      setFlipDigits(Array.from({ length: 10 }, () => "0"));
       return;
     }
-    setFlipDigits(normalizeFlipDigits(winners[0].binanceId).split(""));
-  }, [isFlipGame, winners]);
+    const latestWinner = winnersRaw[0];
+    const winnerParticipant = participants.find((entry) => entry.id === latestWinner.participantId);
+    const winnerDigits = normalizeFlipDigits(winnerParticipant?.binanceId ?? "").split("");
+    setFlipDigits(winnerDigits);
+  }, [isFlipGame, winnersRaw, participants]);
+
+  useEffect(() => () => {
+    if (flipTimerRef.current) {
+      window.clearInterval(flipTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     setSelectedAnswer(null);
@@ -242,6 +384,9 @@ export function MatrixWheelClient({
       };
       if (!payload.displayName || !payload.exchangeId || !payload.walletAddress) {
         throw new Error("required_fields_missing");
+      }
+      if (!/^\d{10}$/.test(payload.exchangeId)) {
+        throw new Error("binance_id_must_be_10_digits");
       }
       const response = await fetch(`/api/public/competitions/${competition.slug}/register`, {
         method: "POST",
@@ -306,7 +451,7 @@ export function MatrixWheelClient({
               <div className="matrix-wheel-status-label">Time Left</div>
             </div>
             <div className="matrix-wheel-status-card">
-              <div className="matrix-wheel-status-number">{winners.length}</div>
+              <div className="matrix-wheel-status-number">{winnersRaw.length}</div>
               <div className="matrix-wheel-status-label">Total Winners</div>
             </div>
           </div>
@@ -354,44 +499,53 @@ export function MatrixWheelClient({
                   </article>
                 </div>
               ) : isFlipGame ? (
-                <div className="matrix-flip-board">
-                  {flipDigits.map((digit, index) => (
-                    <div key={`${digit}-${index}`} className="matrix-flip-slot">
-                      {digit}
+                <div className="live-console__slot-machine matrix-slot-machine-public">
+                  <div className="live-console__slot-face">
+                    <div className="live-console__slot-payline" aria-hidden="true" />
+                    <div className="matrix-flip-board live-console__flip-reels">
+                      {flipDigits.map((digit, index) => (
+                        <div key={`${digit}-${index}`} className={`matrix-flip-slot${isSpinning ? " flipping" : ""}`}>
+                          {digit}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               ) : (
                 wheelPrizes.length ? (
                   <div className={`matrix-wheel-lib-wrap ${wheelTheme}`} style={{ ["--wheel-segments" as string]: wheelPrizes.length }}>
-                    <div className="matrix-wheel-theme-toggle" role="group" aria-label="Wheel theme">
-                      <button
-                        type="button"
-                        className={wheelTheme === "matrix-neon" ? "active" : ""}
-                        onClick={() => setWheelTheme("matrix-neon")}
-                      >
-                        Matrix Neon
-                      </button>
-                      <button
-                        type="button"
-                        className={wheelTheme === "matrix-cyber" ? "active" : ""}
-                        onClick={() => setWheelTheme("matrix-cyber")}
-                      >
-                        Matrix Cyber
-                      </button>
-                    </div>
+                    {showPublicWheelControls && (
+                      <div className="matrix-wheel-theme-toggle" role="group" aria-label="Wheel theme">
+                        <button
+                          type="button"
+                          className={wheelTheme === "matrix-neon" ? "active" : ""}
+                          onClick={() => setWheelTheme("matrix-neon")}
+                        >
+                          Matrix Neon
+                        </button>
+                        <button
+                          type="button"
+                          className={wheelTheme === "matrix-cyber" ? "active" : ""}
+                          onClick={() => setWheelTheme("matrix-cyber")}
+                        >
+                          Matrix Cyber
+                        </button>
+                      </div>
+                    )}
                     <WheelOfFortune
                       ref={wheelRef}
-                      className={`matrix-wheel-lib ${wheelDensityClass} ${wheelSamplingClass}`.trim()}
+                      className={`matrix-wheel-lib ${wheelDensityClass} ${wheelSamplingClass} ${showPublicWheelControls ? "" : "matrix-wheel-lib-readonly"}`.trim()}
                       prizes={wheelPrizes}
                       wheelPointer={<div className="matrix-wheel-lib-pointer" />}
                       wheelSpinButton={
                         <button
                           type="button"
-                          className="matrix-wheel-lib-spin"
-                          disabled={isSpinning}
+                          className={`matrix-wheel-lib-spin${showPublicWheelControls ? "" : " matrix-wheel-lib-spin-hidden"}`}
+                          disabled={isSpinning || !showPublicWheelControls}
+                          tabIndex={showPublicWheelControls ? 0 : -1}
+                          aria-hidden={!showPublicWheelControls}
                           onClick={() => {
-                            if (isSpinning) return;
+                            if (isSpinning || !showPublicWheelControls) return;
                             wheelRef.current?.spin();
                           }}
                         >
@@ -405,10 +559,18 @@ export function MatrixWheelClient({
                       }}
                       onSpinEnd={(prize) => {
                         setIsSpinning(false);
-                        const resolved = participants.find((entry) => entry.id === prize.key) ?? null;
+                        const resolved = pendingBackendWinnerRef.current ?? participants.find((entry) => entry.id === prize.key) ?? null;
+                        pendingBackendWinnerRef.current = null;
                         if (resolved) {
                           setSpinWinner(resolved);
                           setShowWinnerPopup(true);
+                        }
+                        if (queuedBackendWinnerRef.current) {
+                          pendingBackendWinnerRef.current = queuedBackendWinnerRef.current;
+                          queuedBackendWinnerRef.current = null;
+                          window.setTimeout(() => {
+                            wheelRef.current?.spin();
+                          }, 240);
                         }
                       }}
                       animationDurationInMs={4500}
@@ -503,7 +665,7 @@ export function MatrixWheelClient({
             <h2>Join Competition</h2>
             <form action={joinCompetition} className="matrix-form">
               <label><span>Username</span><input name="username" placeholder="Username" required /></label>
-              <label><span>Binance ID</span><input name="binanceId" placeholder="1234567890" required /></label>
+              <label><span>Binance ID</span><input name="binanceId" placeholder="1234567890" inputMode="numeric" pattern="\d{10}" minLength={10} maxLength={10} required /></label>
               <label><span>Wallet</span><input name="wallet" placeholder="0x..." required /></label>
               <label><span>Country</span><input name="country" placeholder="Country" defaultValue="India" /></label>
               <label className="matrix-checkbox"><input type="checkbox" required /> I hold $TANK in this wallet</label>
@@ -517,16 +679,29 @@ export function MatrixWheelClient({
 
       {showLeaderboard ? (
         <div className="matrix-modal-backdrop" onClick={() => setShowLeaderboard(false)}>
-          <div className="matrix-modal" onClick={(event) => event.stopPropagation()}>
+          <div className="matrix-modal matrix-leaderboard-modal" onClick={(event) => event.stopPropagation()}>
             <button className="matrix-modal-close" onClick={() => setShowLeaderboard(false)}>×</button>
-            <h2>Recent Winners</h2>
+            <h2>🏆 Recent Winners</h2>
             <div className="matrix-leaderboard-list">
-              {winners.map((winner, index) => (
-                <div key={`${winner.id}-${index}`} className="matrix-participant">
-                  <strong>{winner.username}</strong>
-                  <span>ID: {winner.binanceId}</span>
-                  <span>{winner.wallet}</span>
-                </div>
+              {leaderboardEntries.map((entry, index) => (
+                <article
+                  key={entry.key}
+                  className={`matrix-leaderboard-entry${index < 3 ? " is-podium" : ""}`}
+                >
+                  <div className="matrix-leaderboard-left">
+                    <div className="matrix-leaderboard-rank">
+                      {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`}
+                    </div>
+                    <div>
+                      <strong>{entry.username}</strong>
+                      <span>ID: {entry.binanceId}</span>
+                    </div>
+                  </div>
+                  <div className="matrix-leaderboard-wins">
+                    <strong>{entry.wins}</strong>
+                    <span>🏆</span>
+                  </div>
+                </article>
               ))}
             </div>
           </div>

@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   WheelOfFortune,
   type WheelOfFortunePrize,
   type WheelOfFortuneRef
 } from "@matmachry/react-wheel-of-fortune";
-import type { Participant } from "@/lib/types";
+import type { CompetitionGameType, Participant } from "@/lib/types";
 
 const WHEEL_THEME_COLORS: Record<"matrix-neon" | "matrix-cyber", Array<`#${string}`>> = {
   "matrix-neon": ["#18E3B0", "#00D47A", "#B7FF00", "#25D9D2", "#00C96B", "#D6FF3D"],
@@ -36,13 +36,27 @@ function wheelNameLabelForDensity(name: string, total: number, step: number) {
   return name.length > maxChars ? `${name.slice(0, maxChars)}..` : name;
 }
 
+function normalizeFlipDigits(input: string) {
+  const digitsOnly = input.replace(/\D/g, "");
+  if (digitsOnly.length >= 10) {
+    return digitsOnly.slice(0, 10);
+  }
+  return digitsOnly.padEnd(10, "0");
+}
+
+function randomDigit() {
+  return String(Math.floor(Math.random() * 10));
+}
+
 export function LiveControlWheelPanel({
   competitionId,
+  gameType,
   participants,
   timeLeft,
   totalWinners
 }: {
   competitionId: string;
+  gameType: CompetitionGameType;
   participants: Participant[];
   timeLeft: string;
   totalWinners: number;
@@ -51,11 +65,20 @@ export function LiveControlWheelPanel({
   const wheelRef = useRef<WheelOfFortuneRef>(null);
   const backendWinnerRef = useRef<WheelParticipant | null>(null);
   const shouldRefreshRef = useRef(false);
+  const flipTimerRef = useRef<number | null>(null);
   const [wheelTheme, setWheelTheme] = useState<"matrix-neon" | "matrix-cyber">("matrix-neon");
   const [isSpinning, setIsSpinning] = useState(false);
+  const [flipDigits, setFlipDigits] = useState<string[]>(Array.from({ length: 10 }, () => "0"));
   const [spinError, setSpinError] = useState<string | null>(null);
   const [winner, setWinner] = useState<WheelParticipant | null>(null);
   const [showWinnerPopup, setShowWinnerPopup] = useState(false);
+  const isFlipGame = gameType === "flip_to_win";
+
+  useEffect(() => () => {
+    if (flipTimerRef.current) {
+      window.clearInterval(flipTimerRef.current);
+    }
+  }, []);
 
   const wheelParticipants = useMemo(() => participants.map(toWheelParticipant), [participants]);
 
@@ -104,7 +127,49 @@ export function LiveControlWheelPanel({
 
   const wheelSamplingClass = labelStep > 1 ? "matrix-wheel-lib--sampled" : "";
 
-  async function startBackendSpin() {
+  function startFlipAnimation(resolvedWinner: WheelParticipant) {
+    if (flipTimerRef.current) {
+      window.clearInterval(flipTimerRef.current);
+      flipTimerRef.current = null;
+    }
+    setIsSpinning(true);
+    setShowWinnerPopup(false);
+    setWinner(null);
+
+    const finalDigits = normalizeFlipDigits(resolvedWinner.binanceId).split("");
+    let tick = 0;
+    const baseTicks = 22;
+    const staggerTicks = finalDigits.length * 2;
+    const endTick = baseTicks + staggerTicks;
+
+    flipTimerRef.current = window.setInterval(() => {
+      tick += 1;
+      setFlipDigits((prev) => prev.map((_, index) => {
+        const lockAt = baseTicks + index * 2;
+        if (tick >= lockAt) {
+          return finalDigits[index] ?? "0";
+        }
+        return randomDigit();
+      }));
+
+      if (tick >= endTick) {
+        if (flipTimerRef.current) {
+          window.clearInterval(flipTimerRef.current);
+          flipTimerRef.current = null;
+        }
+        setFlipDigits(finalDigits);
+        setIsSpinning(false);
+        setWinner(resolvedWinner);
+        setShowWinnerPopup(true);
+        if (shouldRefreshRef.current) {
+          shouldRefreshRef.current = false;
+          router.refresh();
+        }
+      }
+    }, 75);
+  }
+
+  async function executeBackendSpin() {
     if (isSpinning) {
       return;
     }
@@ -127,11 +192,16 @@ export function LiveControlWheelPanel({
       }
 
       const participant = body.participant as Participant | undefined;
+      const resolvedWinner = participant ? toWheelParticipant(participant) : null;
       if (participant) {
-        backendWinnerRef.current = toWheelParticipant(participant);
+        backendWinnerRef.current = resolvedWinner;
       }
       shouldRefreshRef.current = true;
-      wheelRef.current?.spin();
+      if (isFlipGame && resolvedWinner) {
+        startFlipAnimation(resolvedWinner);
+      } else {
+        wheelRef.current?.spin();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "spin_failed";
       setSpinError(`Spin failed: ${message}`);
@@ -157,7 +227,32 @@ export function LiveControlWheelPanel({
       </div>
 
       <div className="matrix-wheel-stage">
-        {wheelPrizes.length ? (
+        {isFlipGame ? (
+          <div className="live-console__flip-wrap">
+            <div className="live-console__slot-machine">
+              <div className="live-console__slot-face">
+                <div className="live-console__slot-payline" aria-hidden="true" />
+                <div className="matrix-flip-board live-console__flip-reels">
+                  {flipDigits.map((digit, index) => (
+                    <div key={`${digit}-${index}`} className={`matrix-flip-slot${isSpinning ? " flipping" : ""}`}>
+                      {digit}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                className={`live-console__spin-arcade${isSpinning ? " is-spinning" : ""}`}
+                type="button"
+                onClick={() => executeBackendSpin()}
+                disabled={isSpinning}
+                aria-label="Spin"
+                title="Spin"
+              >
+                <span className="live-console__spin-arcade-label">SPIN</span>
+              </button>
+            </div>
+          </div>
+        ) : wheelPrizes.length ? (
           <div className={`matrix-wheel-lib-wrap ${wheelTheme}`} style={{ ["--wheel-segments" as string]: wheelPrizes.length }}>
             <div className="matrix-wheel-theme-toggle" role="group" aria-label="Wheel theme">
               <button
@@ -185,7 +280,7 @@ export function LiveControlWheelPanel({
                   type="button"
                   className="matrix-wheel-lib-spin"
                   disabled={isSpinning}
-                  onClick={startBackendSpin}
+                  onClick={() => executeBackendSpin()}
                 >
                   SPIN
                 </button>
@@ -220,7 +315,7 @@ export function LiveControlWheelPanel({
 
       <div className="matrix-wheel-actions">
         <button className="matrix-wheel-cta-primary" type="button">
-          <span aria-hidden="true">🚀</span> Join Competition
+          <span aria-hidden="true">🚀</span> Join Now
         </button>
         <button className="matrix-wheel-cta-secondary" type="button">
           <span aria-hidden="true">🏆</span> Leaderboard
