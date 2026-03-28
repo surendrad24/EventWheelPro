@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
-import { WheelPreview } from "@/components/wheel-preview";
+import { LiveControlFrame } from "@/components/live-control-frame";
+import { LiveControlWheelPanel } from "@/components/live-control-wheel-panel";
 import { formatDateTime } from "@/lib/format";
 import { requireAdminPagePermission } from "@/lib/server/admin-auth";
 import { store } from "@/lib/server/in-memory-store";
@@ -31,10 +32,14 @@ export default async function LiveControlPage({
   }
 
   const competition = maybeCompetition;
+  const competitions = store.listCompetitions();
 
   const eventParticipants = store.getParticipants(id);
   const eventSpins = store.listSpins(id);
   const latestSpin = eventSpins[0];
+  const latestResultParticipant = latestSpin
+    ? eventParticipants.find((participant) => participant.id === latestSpin.resultParticipantId)
+    : undefined;
   const fairnessRecords = store.listSpinFairnessRecords(id);
   const latestFairness = fairnessRecords[0];
   const timeLeft = getTimeLeft(competition.eventEndAt);
@@ -42,100 +47,88 @@ export default async function LiveControlPage({
 
   return (
     <AdminShell title="Live Control" description="Spin management, fairness logging, and round-by-round winner operations.">
-      <section className="live-console card card-pad stack">
-        <div className="live-console__brand">
-          <div className="live-console__brand-title">BINANCE</div>
-          <div className="live-console__brand-sub">@EarnPii - FUSION MATRIX</div>
-        </div>
-        <div className="live-console__nav">
-          <div className="live-console__nav-brand">FUSION MATRIX</div>
-          <div className="live-console__nav-links">Tokens • Heroes • Campaigns • Profile • Competitions</div>
-          <div className="live-console__nav-icons">◉ ◆ ◉ ◉</div>
-        </div>
-        <div className="ticker">
-          <span>
-            MATRIXCLAN.COM/WHEEL Welcome to the BTC Fusion Matrix Party. Please provide ID to be added. By TinkTank on four.meme.
-          </span>
-        </div>
-
-        <div className="live-console__stats">
-          <article className="live-stat">
-            <div className="live-stat__value">{eventParticipants.length}</div>
-            <div className="live-stat__label">Participants</div>
-          </article>
-          <article className="live-stat">
-            <div className="live-stat__value">{timeLeft}</div>
-            <div className="live-stat__label">Time Left</div>
-          </article>
-          <article className="live-stat">
-            <div className="live-stat__value">{store.listWinners(id).length}</div>
-            <div className="live-stat__label">Total Winners</div>
-          </article>
-        </div>
-
-        <div className="live-console__main">
-          <article className="live-console__wheel-panel">
-            <WheelPreview entrants={eventParticipants} highlight={latestSpin?.resultDisplayName} theme="matrix" />
-            <div className="wrap" style={{ justifyContent: "center" }}>
-              <button className="btn">Join Competition</button>
-              <button className="btn-secondary">Leaderboard</button>
+      <LiveControlFrame
+        competitionId={competition.id}
+        competitionOptions={competitions.map((entry) => ({ id: entry.id, title: entry.title }))}
+      >
+        <section className="live-console card card-pad stack">
+          <div className="live-console__brand">
+            <div className="live-console__brand-title">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/binance-logo.svg" alt="Binance" className="live-console__brand-logo" />
             </div>
-            <article className="live-console__mini-note">
-              <strong>How to Join</strong>
-              <div className="muted">Use your Binance nickname + hold required balance + join live chat before draw.</div>
-            </article>
-          </article>
-          <aside className="live-console__participants">
-            <h2 className="section-title">Participants</h2>
-            <div className="live-console__participant-list">
-              {participantList.map((participant) => (
-                <article key={participant.id} className="live-console__participant-item">
-                  <strong>{participant.displayName}</strong>
-                  <div className="muted">ID: {participant.exchangeId ?? "N/A"} • {participant.country}</div>
+            <div className="live-console__brand-sub">@ㄒミKku1 ƵミCkø-Øn - FUSION MATRIX</div>
+          </div>
+          <div className="ticker">
+            <span className="ticker__label">LIVE FEED</span>
+            <span>
+              MATRIXCLAN.COM/WHEEL Welcome to the BTC Fusion Matrix Party. Please provide ID to be added. By TinkTank on four.meme.
+            </span>
+          </div>
+
+          <div className="live-console__main">
+            <article className="live-console__wheel-panel matrix-wheel-panel matrix-wheel-panel-upgraded">
+              <LiveControlWheelPanel
+                competitionId={competition.id}
+                participants={eventParticipants}
+                timeLeft={timeLeft}
+                totalWinners={store.listWinners(id).length}
+              />
+              <section className="live-console__panel-details">
+                <article className="card card-pad stack">
+                  <h2 className="section-title">Latest result</h2>
+                  <div className="list-item">
+                    {latestSpin ? (
+                      <>
+                        <strong>Name: {latestSpin.resultDisplayName}</strong>
+                        <div className="muted">Binance ID: {latestResultParticipant?.exchangeId ?? "N/A"}</div>
+                        <div className="muted">Location: {latestResultParticipant?.country ?? "N/A"}</div>
+                        <div className="muted">{formatDateTime(latestSpin.endedAt)}</div>
+                        <div className="muted" style={{ marginTop: 6 }}>{latestSpin.seedCommitHash}</div>
+                      </>
+                    ) : (
+                      <div className="muted">Spin history will appear here.</div>
+                    )}
+                  </div>
                 </article>
-              ))}
+                <article className="card card-pad stack">
+                  <h2 className="section-title">Fairness proof</h2>
+                  {!latestFairness && <div className="muted">No fairness record yet. Spin once to generate commit/reveal proof.</div>}
+                  {latestFairness && (
+                    <div className="list-item" style={{ fontFamily: "monospace", fontSize: 12 }}>
+                      <div>Verified: {latestFairness.verified ? "YES" : "NO"}</div>
+                      <div>Commit: {latestFairness.commitHash.slice(0, 18)}...{latestFairness.commitHash.slice(-10)}</div>
+                      <div>Reveal: {latestFairness.revealHash.slice(0, 18)}...{latestFairness.revealHash.slice(-10)}</div>
+                      <div>Seed: {latestFairness.serverSeed.slice(0, 16)}...{latestFairness.serverSeed.slice(-8)}</div>
+                      <div>Client: {latestFairness.clientSeed}</div>
+                      <div>Nonce: {latestFairness.nonce}</div>
+                      <div>Pool/Index: {latestFairness.poolSize} / {latestFairness.resolvedIndex}</div>
+                    </div>
+                  )}
+                </article>
+              </section>
+            </article>
+            <aside className="live-console__participants">
+              <h2 className="section-title">Participants</h2>
+              <div className="live-console__participant-list">
+                {participantList.map((participant) => (
+                  <article key={participant.id} className="live-console__participant-item">
+                    <strong>{participant.displayName}</strong>
+                    <div className="muted">ID: {participant.exchangeId ?? "N/A"} • {participant.country}</div>
+                  </article>
+                ))}
+              </div>
+            </aside>
+          </div>
+          <div className="live-console__wave" />
+          <div className="live-console__marquee" aria-label="Live stream ticker">
+            <div className="live-console__marquee-track">
+              <span>#TEAMMATRIX - LIVE STREAMING - WELCOME TO BTC PARTY WHEEL</span>
+              <span aria-hidden="true">#TEAMMATRIX - LIVE STREAMING - WELCOME TO BTC PARTY WHEEL</span>
             </div>
-          </aside>
-        </div>
-
-        <section className="live-console__details">
-          <article className="card card-pad stack">
-            <h2 className="section-title">Latest result</h2>
-            <div className="list-item">
-              <strong>{latestSpin?.resultDisplayName ?? "No spin yet"}</strong>
-              <div className="muted">
-                {latestSpin ? `${formatDateTime(latestSpin.endedAt)} • ${latestSpin.seedCommitHash}` : "Spin history will appear here."}
-              </div>
-            </div>
-          </article>
-          <article className="card card-pad stack">
-            <h2 className="section-title">Fairness proof</h2>
-            {!latestFairness && <div className="muted">No fairness record yet. Spin once to generate commit/reveal proof.</div>}
-            {latestFairness && (
-              <div className="list-item" style={{ fontFamily: "monospace", fontSize: 12 }}>
-                <div>verified: {latestFairness.verified ? "yes" : "no"}</div>
-                <div>commit: {latestFairness.commitHash.slice(0, 18)}...{latestFairness.commitHash.slice(-10)}</div>
-                <div>reveal: {latestFairness.revealHash.slice(0, 18)}...{latestFairness.revealHash.slice(-10)}</div>
-                <div>seed: {latestFairness.serverSeed.slice(0, 16)}...{latestFairness.serverSeed.slice(-8)}</div>
-                <div>client: {latestFairness.clientSeed}</div>
-                <div>nonce: {latestFairness.nonce}</div>
-                <div>pool/index: {latestFairness.poolSize} / {latestFairness.resolvedIndex}</div>
-              </div>
-            )}
-          </article>
-          <article className="card card-pad stack">
-            <h2 className="section-title">Spin history</h2>
-            {eventSpins.slice(0, 5).map((spin) => (
-              <div key={spin.id} className="list-item">
-                <strong>Round {spin.roundNumber}: {spin.resultDisplayName}</strong>
-                <div className="muted">{formatDateTime(spin.endedAt)} • {spin.rngMode}</div>
-              </div>
-            ))}
-          </article>
+          </div>
         </section>
-        <div className="live-console__wave" />
-        <div className="live-console__marquee">#TEAMMATRIX - LIVE STREAMING - WELCOME TO BTC PARTY WHEEL</div>
-      </section>
+      </LiveControlFrame>
     </AdminShell>
   );
 }

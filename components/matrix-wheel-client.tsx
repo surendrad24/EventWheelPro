@@ -422,8 +422,12 @@ export function MatrixWheelClient({
               )}
             </div>
             <div className="matrix-wheel-actions">
-              <button className="matrix-wheel-cta-primary" onClick={() => setShowJoin(true)}>Join Now</button>
-              <button className="matrix-wheel-cta-secondary" onClick={() => setShowLeaderboard(true)}>Leaderboard</button>
+              <button className="matrix-wheel-cta-primary" onClick={() => setShowJoin(true)}>
+                <span aria-hidden="true">🚀</span> Join Now
+              </button>
+              <button className="matrix-wheel-cta-secondary" onClick={() => setShowLeaderboard(true)}>
+                <span aria-hidden="true">🏆</span> Leaderboard
+              </button>
             </div>
           </section>
 
